@@ -4,14 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "preinstall": "npx npm-force-resolutions",
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"
-  },
-  "resolutions": {
-    "@coinbase/wallet-sdk": "0.0.0"
   },
   "dependencies": {
     "@reown/appkit": "^1.7.3",
