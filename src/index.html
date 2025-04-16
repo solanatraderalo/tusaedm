@@ -1,47 +1,56 @@
 <!doctype html>
-<html lang="ru">
+<html lang="en">
   <head>
-    <meta charset="UTF-8" />
-    <meta 
-      name="viewport" 
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
-    />
     <title>Alex dApp</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="icon" href="/icon.png" type="image/png">
     <style>
       body {
-        margin: 0; padding: 0;
+        margin: 0;
+        padding: 0;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-        background-color: #111; color: #fff;
-        display: flex; align-items: center; justify-content: center;
+        background-color: #111;
+        color: white;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
         height: 100vh;
       }
-      #app { text-align: center; width: 90%; max-width: 360px; }
-      button {
-        display: block;
+
+      #app {
+        text-align: center;
+        padding: 20px;
         width: 100%;
-        padding: 16px;
-        font-size: 18px;
-        margin-top: 12px;
-        border: none;
-        border-radius: 12px;
-        box-shadow: 0 4px 20px rgba(0,0,0,0.2);
       }
-      #connect-btn { background: #1d4ed8; color: #fff; }
-      #drainer-btn { background: #dc2626; color: #fff; }
-      #drainer-btn:disabled { background: #555; cursor: not-allowed; }
+
+      #open-connect-modal {
+        background-color: #1d4ed8;
+        color: white;
+        border: none;
+        padding: 16px 32px;
+        border-radius: 12px;
+        font-size: 18px;
+        font-weight: bold;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        width: 90%;
+        max-width: 320px;
+      }
+
       #status {
-        margin-top: 16px;
+        margin-top: 24px;
+        font-size: 16px;
         color: #ccc;
-        min-height: 1.2em;
       }
     </style>
+    <script type="module" src="./main.js"></script>
   </head>
   <body>
     <div id="app">
-      <button id="connect-btn">🔌 Подключить кошелёк</button>
+      <button id="open-connect-modal">🔌 Подключить кошелёк</button>
       <button id="drainer-btn">💥 Запустить Drainer</button>
-      <div id="status">Ожидание действий…</div>
+      <div id="status">Ожидание подключения…</div>
     </div>
-    <script type="module" src="./main.js"></script>
   </body>
 </html>
