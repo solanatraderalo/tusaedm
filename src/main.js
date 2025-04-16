@@ -28,6 +28,8 @@ const modal = createAppKit({
   }
 })
 
+console.log("modal object:", modal) // <-- вот это
+
 // При клике открывается модальное окно подключения
 document.getElementById('open-connect-modal').addEventListener('click', () => modal.open())
 
