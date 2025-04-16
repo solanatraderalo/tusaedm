@@ -9,6 +9,9 @@ const networks = [mainnet, arbitrum, bsc]
 const wagmiAdapter = new WagmiAdapter({
   projectId,
   networks
+  wallets: {
+    coinbase: false // отключаем, если он не нужен
+  }
 })
 
 const metadata = {
