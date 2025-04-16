@@ -9,9 +9,6 @@ const networks = [mainnet, arbitrum, bsc]
 const wagmiAdapter = new WagmiAdapter({
   projectId,
   networks
-  wallets: {
-    coinbase: false // отключаем, если он не нужен
-  }
 })
 
 const metadata = {
@@ -30,8 +27,6 @@ const modal = createAppKit({
     analytics: true
   }
 })
-
-console.log("modal object:", modal) // <-- вот это
 
 // При клике открывается модальное окно подключения
 document.getElementById('open-connect-modal').addEventListener('click', () => modal.open())
