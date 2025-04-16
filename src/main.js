@@ -14,11 +14,12 @@ const wagmiAdapter = new WagmiAdapter({
 })
 
 const metadata = {
-  name: 'sam',
-  description: 'AppKit Example',
-  url: 'https://reown.com/appkit',
-  icons: ['https://assets.reown.com/reown-profile-pic.png']
+  name: 'Alex dApp',
+  description: 'Connect your wallet',
+  url: 'https://checkalex.xyz', // <-- или https://tusaedm.pages.dev
+  icons: ['https://checkalex.xyz/icon.png']
 }
+
 
 const modal = createAppKit({
   adapters: [wagmiAdapter],
