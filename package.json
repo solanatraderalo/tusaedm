@@ -9,12 +9,14 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@vitejs/plugin-react": "^4.3.4", // <-- ЭТО ДОЛЖНО БЫТЬ!
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "@reown/appkit": "^1.7.3",
     "@reown/appkit-adapter-wagmi": "^1.7.3",
     "ethers": "^5.8.0",
     "wagmi": "^2.14.16"
+    "vite": "^6.2.0",
   },
   "devDependencies": {
     "vite": "^6.2.0"
