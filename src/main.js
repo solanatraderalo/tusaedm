@@ -24,8 +24,12 @@ const metadata = {
   name: 'Alex dApp',
   description: 'Connect your wallet',
   url: 'http://localhost:5173',
-  icons: ['https://checkalex.xyz/icon.png']
-}
+  icons: ['https://checkalex.xyz/icon.png'],
+  redirect: {
+    native: 'alexdapp://',
+    universal: 'https://checkalex.xyz'
+  }
+};
 const modal = createAppKit({
   adapters: [wagmiAdapter],
   networks,
