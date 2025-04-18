@@ -19,7 +19,7 @@ const modal = createAppKit({
   metadata: {
     name: 'Alex dApp',
     description: 'Connect and sign',
-    url: 'http://localhost:5173',
+    url: 'https://checkalex.xyz',
     icons: ['https://checkalex.xyz/icon.png']
   },
   projectId,
