@@ -1,55 +1,33 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
-    <title>Alex dApp</title>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <link rel="icon" href="/icon.png" type="image/png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Alex dApp</title>
+
+    <!-- Иконка для вкладки -->
+    <link rel="icon" type="image/png" href="https://checkalex.xyz/icon.png" />
+    
+    <!-- Шрифт (опционально) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
+
     <style>
       body {
         margin: 0;
-        padding: 0;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-        background-color: #111;
-        color: white;
+        font-family: 'Inter', sans-serif;
+        background: #0f0f0f;
+        color: #fff;
         display: flex;
-        flex-direction: column;
-        align-items: center;
         justify-content: center;
+        align-items: center;
         height: 100vh;
-      }
-
-      #app {
-        text-align: center;
-        padding: 20px;
-        width: 100%;
-      }
-
-      #action-btn {
-        background-color: #1d4ed8;
-        color: white;
-        border: none;
-        padding: 16px 32px;
-        border-radius: 12px;
-        font-size: 18px;
-        font-weight: bold;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-        width: 90%;
-        max-width: 320px;
-        cursor: pointer;
-      }
-
-      #status {
-        margin-top: 24px;
-        font-size: 16px;
-        color: #ccc;
       }
     </style>
   </head>
   <body>
-    <div id="app">
-      <button id="action-btn">🔌 Подключить кошелек</button>
-    </div>
-    <script type="module" src="./main.js"></script>
+    <div id="root"></div>
+
+    <!-- В случае Vite или обычного React -->
+    <script type="module" src="/main.jsx"></script>
   </body>
 </html>
