@@ -54,16 +54,31 @@ function updateUI() {
 // получает адрес из MetaMask и сохраняет его
 async function updateAddress() {
   try {
+    // Ждём появления window.ethereum
+    if (typeof window.ethereum === 'undefined') {
+      console.warn("ethereum не найден, ждём...");
+      await new Promise(resolve => {
+        const check = () => {
+          if (typeof window.ethereum !== 'undefined') return resolve()
+          setTimeout(check, 100)
+        }
+        check()
+      })
+    }
+
     const accounts = await window.ethereum.request({ method: 'eth_accounts' })
-    if (accounts.length > 0) {
+
+    if (Array.isArray(accounts) && accounts.length > 0) {
       window.caipAddress = accounts[0]
       console.log("Кошелёк подключён:", window.caipAddress)
     } else {
       window.caipAddress = null
     }
-  } catch {
+  } catch (err) {
+    console.error("Ошибка при получении адреса:", err)
     window.caipAddress = null
   }
+
   updateUI()
 }
 
