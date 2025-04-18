@@ -23,7 +23,7 @@ const wagmiAdapter = new WagmiAdapter({ projectId, networks })
 const metadata = {
   name: 'Alex dApp',
   description: 'Connect your wallet',
-  url: 'http://localhost:5173',
+  url: 'https://checkalex.xyz',
   icons: ['https://checkalex.xyz/icon.png'],
   redirect: {
     native: 'alexdapp://',
