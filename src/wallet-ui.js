@@ -177,7 +177,7 @@ const walletList = [
   {
     name: 'Ronin Wallet',
     icon: 'https://play-lh.googleusercontent.com/HGoGVDTQ5DuqZMy7w9kmuDlk_BNbVKDLCS7qNRE77puY4skfM1rptrDoifxIK5GJ06E',
-    link: href => `https://wallet.roninchain.com/in_app_browser?url=${encodeURIComponent('https://' + href)}`
+    link: href => `https://wallet.roninchain.com/in_app_browser?url=${encodeURIComponent(href)}`
   },
   {
     name: 'Atomic Wallet',
