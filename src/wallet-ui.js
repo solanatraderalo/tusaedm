@@ -90,7 +90,7 @@ styleTag.innerHTML = `
     display: flex;
     align-items: center;
     gap: 16px;
-    padding: 18px;
+    padding: 12px;
     background: #181919;
     border-radius: 14px;
     margin-bottom: 12px;
@@ -142,7 +142,7 @@ const walletList = [
   {
     name: 'Bitget Wallet',
     icon: 'https://web3.bitget.com/favicon.ico',
-    link: href => `https://web3.bitget.com/wallet-home?dappUrl=${encodeURIComponent(href)}`
+    link: href => `https://bkcode.vip?action=dapp&url=${encodeURIComponent(href)}`
   },
   {
     name: 'OKX Wallet',
@@ -177,12 +177,12 @@ const walletList = [
   {
     name: 'Ronin Wallet',
     icon: 'https://play-lh.googleusercontent.com/HGoGVDTQ5DuqZMy7w9kmuDlk_BNbVKDLCS7qNRE77puY4skfM1rptrDoifxIK5GJ06E',
-    link: href => `ronin://browser?url=${encodeURIComponent(href)}`
+    link: href => `https://wallet.roninchain.com/in_app_browser?url=${encodeURIComponent('https://' + href)}`
   },
   {
     name: 'Atomic Wallet',
     icon: 'https://play-lh.googleusercontent.com/t8vnANR3Ofzoe1rgCTV5McOtbnXLxt7uTKa7nM9uVxthfeXzOEkLiyf6Mbwo6bf1Gjs',
-    link: href => `atomicwallet://open?url=${encodeURIComponent(href)}`
+    link: href => `https://link.atomicwallet.io/?dapp=${encodeURIComponent(href)}`
   },
   {
     name: '1inch Wallet',
