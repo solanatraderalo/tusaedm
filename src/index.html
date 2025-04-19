@@ -1,33 +1,55 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Alex dApp</title>
-
-    <!-- Иконка для вкладки -->
-    <link rel="icon" type="image/png" href="https://checkalex.xyz/icon.png" />
-    
-    <!-- Шрифт (опционально) -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet" />
-
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <link rel="icon" href="/icon.png" type="image/png">
     <style>
       body {
         margin: 0;
-        font-family: 'Inter', sans-serif;
-        background: #0f0f0f;
-        color: #fff;
+        padding: 0;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        background-color: #111;
+        color: white;
         display: flex;
-        justify-content: center;
+        flex-direction: column;
         align-items: center;
+        justify-content: center;
         height: 100vh;
+      }
+
+      #app {
+        text-align: center;
+        padding: 20px;
+        width: 100%;
+      }
+
+      #action-btn {
+        background-color: #1d4ed8;
+        color: white;
+        border: none;
+        padding: 16px 32px;
+        border-radius: 12px;
+        font-size: 18px;
+        font-weight: bold;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        width: 90%;
+        max-width: 320px;
+        cursor: pointer;
+      }
+
+      #status {
+        margin-top: 24px;
+        font-size: 16px;
+        color: #ccc;
       }
     </style>
   </head>
   <body>
-    <div id="root"></div>
-
-    <!-- В случае Vite или обычного React -->
-    <script type="module" src="/main.jsx"></script>
+    <div id="app">
+      <a id="action-btn">Connect btn</a>
+    </div>
+    <script type="module" src="./main.js"></script>
   </body>
 </html>
