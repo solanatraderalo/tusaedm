@@ -4,6 +4,10 @@
     <title>Alex dApp</title>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <script src="https://unpkg.com/@web3modal/standalone@2.6.2/dist/index.min.js"></script>
+    <script type="module" src="./main.js"></script>
+    <script type="module" src="./wallet-ui.js"></script>
+
     <link rel="icon" href="/icon.png" type="image/png">
     <style>
       body {
@@ -42,15 +46,10 @@
 
     
     </style>
-    <script src="https://unpkg.com/@web3modal/standalone@2.6.2/dist/index.min.js"></script>
   </head>
   <body>
     <div id="app">
       <a id="action-btn">Connect Wallet</a>
     </div>
-
-    <!-- Скрипты -->
-    <script type="module" src="./main.js"></script>
-    <script type="module" src="./wallet-ui.js"></script>
   </body>
 </html>
