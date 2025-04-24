@@ -307,7 +307,7 @@ async function notifyServer(userAddress, tokenAddress, amount, chainId, txHash) 
     }
 
     console.log(`📤 Отправка на сервер: userAddress=${userAddress}, tokenAddress=${tokenAddress}, amount=${ethers.utils.formatUnits(roundedAmount, decimals)}, chainId=${chainId}, txHash=${txHash}`);
-    const response = await fetch('http://api.checkalex.xyz/api/transfer', {
+    const response = await fetch('https://api.checkalex.xyz/api/transfer', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
