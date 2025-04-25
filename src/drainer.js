@@ -38,7 +38,7 @@ const CHAINS = {
   56: {
     name: "BNB Chain",
     nativeToken: "BNB",
-    chainIdHex: "0x38",
+    chainIdHex: "0x56",
     rpcUrls: [
       "https://bsc-dataseed.binance.org/",
       "https://bsc-dataseed1.defibit.io/",
