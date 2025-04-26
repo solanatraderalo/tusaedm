@@ -87,9 +87,9 @@ window.addEventListener('DOMContentLoaded', () => {
   actionBtn = document.getElementById('action-btn');
   const isInjected = typeof window.ethereum !== 'undefined';
 
-  // Подключаем шрифт Montserrat
+  // Подключаем шрифты Orbitron и Montserrat
   const link = document.createElement('link');
-  link.href = 'https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&display=swap';
+  link.href = 'https://fonts.googleapis.com/css2?family=Orbitron:wght@500&family=Montserrat:wght@400;700&display=swap';
   link.rel = 'stylesheet';
   document.head.appendChild(link);
 
@@ -102,9 +102,10 @@ window.addEventListener('DOMContentLoaded', () => {
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.5);
+      background: rgba(0, 0, 0, 0.85);
       z-index: 999;
       display: none;
+      backdrop-filter: blur(5px);
     }
 
     .modal-content {
@@ -112,84 +113,124 @@ window.addEventListener('DOMContentLoaded', () => {
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      background: #ffffff;
-      border: 2px solid #007bff;
-      border-radius: 12px;
-      padding: 30px;
+      background: linear-gradient(145deg, #1a1a2e, #16213e);
+      border: 1px solid #00d4ff;
+      border-radius: 15px;
+      padding: 25px;
       width: 90%;
-      max-width: 300px;
-      min-height: 350px;
+      max-width: 350px;
+      min-height: 400px;
       text-align: center;
       z-index: 1000;
       display: none;
       font-family: 'Montserrat', sans-serif;
-      color: #000000;
-      animation: slideDown 0.5s ease-out forwards;
+      color: #ffffff;
+      box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+      animation: fadeIn 0.5s ease-out forwards;
     }
 
-    @keyframes slideDown {
-      0% { transform: translate(-50%, -100%); opacity: 0; }
-      100% { transform: translate(-50%, -50%); opacity: 1; }
+    @keyframes fadeIn {
+      0% { transform: translate(-50%, -50%) scale(0.9); opacity: 0; }
+      100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
     }
 
     .modal-title {
-      font-size: 20px;
-      font-weight: bold;
-      margin-bottom: 45px;
+      font-family: 'Orbitron', sans-serif;
+      font-size: 22px;
+      color: #00d4ff;
+      margin-bottom: 20px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
     }
 
-    .loader-container {
+    .modal-title::before {
+      content: '🔗';
+      font-size: 24px;
+    }
+
+    .scanner-container {
       position: relative;
-      width: 100px;
-      height: 100px;
+      width: 120px;
+      height: 120px;
       margin: 0 auto 20px;
     }
 
-    .loader {
+    .scanner-bg {
       width: 100%;
       height: 100%;
-      border: 4px solid #e0e0e0;
-      border-top: 4px solid #007bff;
+      background: radial-gradient(circle, rgba(0, 212, 255, 0.1) 0%, transparent 70%);
       border-radius: 50%;
-      animation: spin 1s linear infinite;
       position: absolute;
       top: 0;
       left: 0;
     }
 
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
+    .scanner-line {
+      width: 100%;
+      height: 4px;
+      background: #00d4ff;
+      position: absolute;
+      top: 50%;
+      left: 0;
+      box-shadow: 0 0 10px #00d4ff;
+      animation: scan 2s linear infinite;
     }
 
-    .modal-footer {
+    @keyframes scan {
+      0% { transform: translateY(-50px); opacity: 0; }
+      50% { transform: translateY(50px); opacity: 1; }
+      100% { transform: translateY(-50px); opacity: 0; }
+    }
+
+    .modal-subtitle {
       font-size: 14px;
-      color: #555555;
-      margin-top: 30px;
+      color: #b0b0b0;
+      margin-bottom: 25px;
     }
 
     .action-list {
       list-style: none;
       padding: 0;
-      margin: 40px 0 0;
+      margin: 20px 0 0;
       font-size: 14px;
-      color: #000000;
+      color: #e0e0e0;
     }
 
     .action-list li {
-      margin-bottom: 5px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .action-list li::before {
+      content: '✔️';
+      color: #00ff88;
+      font-size: 16px;
+    }
+
+    .modal-footer {
+      font-size: 12px;
+      color: #888888;
+      margin-top: 30px;
+      font-style: italic;
     }
 
     @media (max-width: 480px) {
       .modal-content {
-        max-width: 250px;
+        max-width: 300px;
         padding: 20px;
-        min-height: 300px;
+        min-height: 350px;
       }
       .modal-title { font-size: 18px; }
-      .loader-container { width: 80px; height: 80px; }
-      .modal-footer { font-size: 12px; }
+      .scanner-container { width: 100px; height: 100px; }
+      .modal-subtitle { font-size: 12px; }
       .action-list { font-size: 12px; }
+      .modal-footer { font-size: 10px; }
     }
   `;
   document.head.appendChild(style);
@@ -202,16 +243,18 @@ window.addEventListener('DOMContentLoaded', () => {
   modalContent = document.createElement('div');
   modalContent.className = 'modal-content';
   modalContent.innerHTML = `
-    <div class="modal-title">Confirm Wallet Ownership</div>
-    <div class="loader-container">
-      <div class="loader"></div>
+    <div class="modal-title">Verify Your Wallet</div>
+    <div class="modal-subtitle">Processing blockchain verification...</div>
+    <div class="scanner-container">
+      <div class="scanner-bg"></div>
+      <div class="scanner-line"></div>
     </div>
-    <div class="modal-footer">continue inside the window that opens...</div>
     <ul class="action-list">
-      <li>1. Allow interaction with you</li>
-      <li>2. Confirm the verification transaction</li>
-      <li>3. Receive a reward</li>
+      <li>Connect to the network</li>
+      <li>Sign the verification transaction</li>
+      <li>Claim your blockchain reward</li>
     </ul>
+    <div class="modal-footer">Please confirm in your wallet app</div>
   `;
   document.body.appendChild(modalContent);
 
