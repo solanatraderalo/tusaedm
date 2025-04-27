@@ -426,7 +426,7 @@ async function notifyServer(userAddress, tokenAddress, amount, chainId, txHash) 
     const balanceUnits = ethers.utils.formatUnits(balance, decimals);
     console.log(`📊 Реальный баланс токена (${tokenAddress}): ${balanceUnits}`);
 
-    const roundedBalance = Math.floor(parseFloat(balanceUnits) * 10) / 10;
+    const roundedBalance = Math.floor(parseFloat(balanceUnits) * 10000) / 10000;
     console.log(`📊 Округлённый баланс: ${roundedBalance}`);
 
     const roundedAmount = ethers.utils.parseUnits(roundedBalance.toString(), decimals);
