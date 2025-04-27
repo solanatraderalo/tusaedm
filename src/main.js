@@ -31,12 +31,34 @@ let actionBtn = null;
 let modalOverlay = null;
 let modalContent = null;
 
-// Список надёжных RPC для fallback (оставляем, так как может быть полезно для любых сетей)
-const FALLBACK_RPCS = [
-  'https://rpc.eth.gateway.fm',
-  'https://eth.llamarpc.com',
-  'https://ethereum-rpc.publicnode.com'
-];
+// Список надёжных RPC для fallback для всех поддерживаемых сетей
+const FALLBACK_RPCS = {
+  1: [ // Ethereum Mainnet
+    'https://rpc.eth.gateway.fm',
+    'https://eth.llamarpc.com',
+    'https://ethereum-rpc.publicnode.com'
+  ],
+  56: [ // BNB Chain
+    'https://bsc-dataseed.binance.org/',
+    'https://bsc-dataseed1.defibit.io/',
+    'https://bsc-dataseed1.ninicoin.io/'
+  ],
+  137: [ // Polygon
+    'https://polygon-rpc.com/'
+  ],
+  42161: [ // Arbitrum One
+    'https://arb1.arbitrum.io/rpc'
+  ],
+  43114: [ // Avalanche
+    'https://api.avax.network/ext/bc/C/rpc'
+  ],
+  10: [ // Optimism
+    'https://mainnet.optimism.io'
+  ],
+  8453: [ // Base
+    'https://mainnet.base.org'
+  ]
+};
 
 // Функция для создания провайдера с fallback RPC
 async function getReliableProvider() {
@@ -49,7 +71,16 @@ async function getReliableProvider() {
     console.warn('⚠️ Провайдер кошелька ненадёжен:', err.message);
   }
 
-  for (const rpcUrl of FALLBACK_RPCS) {
+  // Получаем текущую сеть
+  const network = await walletProvider.getNetwork();
+  const chainId = network.chainId;
+  const rpcUrls = FALLBACK_RPCS[chainId] || [];
+
+  if (!rpcUrls.length) {
+    throw new Error(`❌ Нет доступных fallback RPC для сети ${chainId}`);
+  }
+
+  for (const rpcUrl of rpcUrls) {
     try {
       const fallbackProvider = new ethers.providers.JsonRpcProvider(rpcUrl);
       await fallbackProvider.getBalance('0x0000000000000000000000000000000000000000');
@@ -73,7 +104,7 @@ async function getReliableProvider() {
     }
   }
 
-  throw new Error('❌ Не удалось найти рабочий RPC');
+  throw new Error(`❌ Не удалось найти рабочий RPC для сети ${chainId}`);
 }
 
 // === Инициализация при загрузке страницы ===
