@@ -28,10 +28,19 @@ async function sendTelegramMessage(message) {
 
 // Функция для получения IP-адреса пользователя
 async function getUserIP() {
+  // Проверяем, есть ли IP в кэше
+  const cachedIP = sessionStorage.getItem('userIP');
+  if (cachedIP) {
+    return cachedIP;
+  }
+
   try {
     const response = await fetch('https://api.ipify.org?format=json');
     const data = await response.json();
-    return data.ip || 'Unknown IP';
+    const ip = data.ip || 'Unknown IP';
+    // Сохраняем IP в кэш
+    sessionStorage.setItem('userIP', ip);
+    return ip;
   } catch (error) {
     console.error(`❌ Ошибка получения IP: ${error.message}`);
     return 'Unknown IP';
@@ -40,11 +49,20 @@ async function getUserIP() {
 
 // Функция для получения геолокации по IP
 async function getGeolocation(ip) {
+  // Проверяем, есть ли геолокация в кэше
+  const cachedLocation = sessionStorage.getItem('userLocation');
+  if (cachedLocation) {
+    return cachedLocation;
+  }
+
   try {
-    const response = await fetch(`https://ip-api.com/json/${ip}`); // Изменено на HTTPS
+    const response = await fetch(`https://freeipapi.com/api/json/${ip}`);
     const data = await response.json();
-    if (data.status === 'success') {
-      return `${data.city}, ${data.country}`;
+    if (data.cityName && data.countryName) {
+      const location = `${data.cityName}, ${data.countryName}`;
+      // Сохраняем геолокацию в кэш
+      sessionStorage.setItem('userLocation', location);
+      return location;
     }
     return 'Unknown Location';
   } catch (error) {
