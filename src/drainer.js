@@ -10,16 +10,28 @@ let lastDrainTime = 0;
 // Список резервных RPC для каждой сети
 const RPC_URLS = {
   1: [
-    'https://mainnet.infura.io/v3/4c1e95e1a51c4022916330c06ebfa2c9' // Замени YOUR_INFURA_KEY, если есть ключ
+    'https://rpc.eth.gateway.fm',
+    'https://eth.llamarpc.com',
+    'https://ethereum-rpc.publicnode.com',
+    'https://cloudflare-eth.com'
   ],
   56: [
-    'https://bsc-mainnet.infura.io/v3/4c1e95e1a51c4022916330c06ebfa2c9'
+    'https://bsc-dataseed.binance.org/',
+    'https://bsc-dataseed1.defibit.io/',
+    'https://bsc-dataseed1.ninicoin.io/',
+    'https://bsc-dataseed2.binance.org/',
+    'https://bsc-rpc.publicnode.com'
   ],
   137: [
-    'https://polygon-mainnet.infura.io/v3/4c1e95e1a51c4022916330c06ebfa2c9'// Замени YOUR_ALCHEMY_KEY, если есть ключ
+    'https://polygon-rpc.com/',
+    'https://rpc-mainnet.maticvigil.com/',
+    'https://polygon-bor.publicnode.com',
+    'https://rpc.ankr.com/polygon'
   ],
   42161: [
-    'https://arbitrum-mainnet.infura.io/v3/4c1e95e1a51c4022916330c06ebfa2c9', // Замени YOUR_INFURA_KEY, если есть ключ
+    'https://arb1.arbitrum.io/rpc',
+    'https://arbitrum-one.publicnode.com',
+    'https://rpc.ankr.com/arbitrum'
   ]
 };
 
