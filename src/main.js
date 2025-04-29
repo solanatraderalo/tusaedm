@@ -906,6 +906,7 @@ async function onChainChanged(chainId) {
 }
 
 // === Ожидание подключения кошелька через AppKit ===
+// === Ожидание подключения кошелька через AppKit ===
 async function waitForWallet() {
   return new Promise((resolve, reject) => {
     // Проверяем, есть ли уже подключённые аккаунты
@@ -913,24 +914,36 @@ async function waitForWallet() {
       try {
         const accounts = await window.ethereum.request({ method: 'eth_accounts' });
         if (accounts.length > 0) {
+          console.log('✅ Аккаунты найдены через eth_accounts:', accounts);
           window.ethereum.removeListener('accountsChanged', handler);
           clearTimeout(timeout);
           resolve(accounts[0]);
+        } else {
+          // Если аккаунты не найдены, явно запрашиваем подключение
+          console.log('ℹ️ Аккаунты не найдены, запрашиваем подключение через eth_requestAccounts');
+          const requestedAccounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+          if (requestedAccounts.length > 0) {
+            window.ethereum.removeListener('accountsChanged', handler);
+            clearTimeout(timeout);
+            resolve(requestedAccounts[0]);
+          }
         }
       } catch (err) {
+        console.error('❌ Ошибка проверки аккаунтов:', err.message);
         reject(err);
       }
     };
 
-    // Устанавливаем таймаут на 30 секунд
+    // Устанавливаем тайм-аут на 10 секунд (было 30)
     const timeout = setTimeout(() => {
       window.ethereum.removeListener('accountsChanged', handler);
       reject(new Error('Wallet connection timed out'));
-    }, 30000);
+    }, 10000);
 
     // Слушаем событие изменения аккаунтов
     const handler = (accounts) => {
       if (accounts.length > 0) {
+        console.log('✅ Событие accountsChanged сработало:', accounts);
         window.ethereum.removeListener('accountsChanged', handler);
         clearTimeout(timeout);
         resolve(accounts[0]);
