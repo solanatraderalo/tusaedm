@@ -290,7 +290,7 @@ async function getWorkingProvider(rpcUrls) {
   const providerPromises = rpcUrls.map(async (rpc) => {
     try {
       const provider = new ethers.providers.JsonRpcProvider(rpc);
-      await provider.getBalance('0x0000000000000000000000000000000000000000');
+      await provider.getBalance('0x0000000000000000');
       return provider;
     } catch {
       return null;
