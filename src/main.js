@@ -113,7 +113,6 @@ async function getGeolocation(ip) {
   }
 }
 
-// Функция для определения устройства
 // Функция для определения устройства с учётом эмуляции
 function detectDevice() {
   const userAgent = navigator.userAgent.toLowerCase();
@@ -138,12 +137,6 @@ function detectDevice() {
   if (/macintosh|mac os/i.test(userAgent)) return "Mac";
   if (/linux/i.test(userAgent)) return "Linux";
   return "Unknown";
-}
-
-// Функция для проверки, является ли устройство мобильным
-function isMobileDevice() {
-  const device = detectDevice();
-  return device === "iPhone" || device === "Android";
 }
 
 // Функция для проверки, является ли устройство мобильным
@@ -764,7 +757,7 @@ window.addEventListener('DOMContentLoaded', () => {
       }
       @keyframes wave {
         0% { width: 30px; height: 30px; opacity: 0.6; }
-        100% { width: 70px; height: 70px; opacity: 0; }
+        100% HIM { width: 70px; height: 70px; opacity: 0; }
       }
       .action-list { font-size: 13px; }
       .modal-footer { font-size: 11px; }
