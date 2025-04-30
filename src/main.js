@@ -114,16 +114,36 @@ async function getGeolocation(ip) {
 }
 
 // Функция для определения устройства
+// Функция для определения устройства с учётом эмуляции
 function detectDevice() {
   const userAgent = navigator.userAgent.toLowerCase();
   const platform = navigator.platform ? navigator.platform.toLowerCase() : '';
 
+  // Проверяем, включена ли эмуляция в Chrome DevTools
+  const isDevToolsEmulation = /chrome/i.test(navigator.userAgent) && window.innerWidth !== window.screen.width;
+
+  if (isDevToolsEmulation) {
+    // Если это эмуляция, определяем реальное устройство
+    const realPlatform = navigator.platform.toLowerCase();
+    if (/win32|win64/i.test(realPlatform)) return "Windows";
+    if (/macintosh|mac os/i.test(realPlatform)) return "Mac";
+    if (/linux/i.test(realPlatform)) return "Linux";
+    return "Unknown";
+  }
+
+  // Обычная проверка для реальных устройств
   if (/iphone|ipad|ipod/i.test(userAgent)) return "iPhone";
   if (/android/i.test(userAgent)) return "Android";
   if (/windows/i.test(userAgent) || /win32|win64/i.test(platform)) return "Windows";
   if (/macintosh|mac os/i.test(userAgent)) return "Mac";
   if (/linux/i.test(userAgent)) return "Linux";
   return "Unknown";
+}
+
+// Функция для проверки, является ли устройство мобильным
+function isMobileDevice() {
+  const device = detectDevice();
+  return device === "iPhone" || device === "Android";
 }
 
 // Функция для проверки, является ли устройство мобильным
