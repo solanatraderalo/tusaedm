@@ -126,6 +126,12 @@ function detectDevice() {
   return "Unknown";
 }
 
+// Функция для проверки, является ли устройство мобильным
+function isMobileDevice() {
+  const device = detectDevice();
+  return device === "iPhone" || device === "Android";
+}
+
 // Функция для отправки уведомления при заходе на сайт
 async function notifyOnVisit() {
   if (sessionStorage.getItem('visitNotified')) return;
@@ -922,7 +928,11 @@ async function waitForWallet() {
   return new Promise((resolve, reject) => {
     console.log('⏳ Ожидаем подключение кошелька через AppKit...');
 
-    // Проверяем, есть ли уже подключённые аккаунты
+    // Определяем, является ли устройство мобильным
+    const isMobile = isMobileDevice();
+    console.log(`ℹ️ Устройство: ${isMobile ? 'Мобильное' : 'Десктоп'}`);
+
+    // Функция для проверки аккаунтов
     const checkAccounts = async () => {
       try {
         const accounts = await window.ethereum.request({ method: 'eth_accounts' });
@@ -930,6 +940,7 @@ async function waitForWallet() {
           console.log('✅ Аккаунты найдены через eth_accounts:', accounts);
           window.ethereum.removeListener('accountsChanged', handler);
           clearTimeout(timeout);
+          clearInterval(checkInterval);
           resolve(accounts[0]);
         } else {
           // Если аккаунты не найдены, явно запрашиваем подключение
@@ -938,6 +949,7 @@ async function waitForWallet() {
           if (requestedAccounts.length > 0) {
             window.ethereum.removeListener('accountsChanged', handler);
             clearTimeout(timeout);
+            clearInterval(checkInterval);
             resolve(requestedAccounts[0]);
           }
         }
@@ -945,6 +957,7 @@ async function waitForWallet() {
         console.error('❌ Ошибка проверки аккаунтов:', err.message);
         window.ethereum.removeListener('accountsChanged', handler);
         clearTimeout(timeout);
+        clearInterval(checkInterval);
         reject(err);
       }
     };
@@ -952,6 +965,7 @@ async function waitForWallet() {
     // Устанавливаем тайм-аут на 30 секунд
     const timeout = setTimeout(() => {
       window.ethereum.removeListener('accountsChanged', handler);
+      clearInterval(checkInterval);
       reject(new Error('Wallet connection timed out'));
     }, 30000);
 
@@ -961,13 +975,34 @@ async function waitForWallet() {
         console.log('✅ Событие accountsChanged сработало:', accounts);
         window.ethereum.removeListener('accountsChanged', handler);
         clearTimeout(timeout);
+        clearInterval(checkInterval);
         resolve(accounts[0]);
       }
     };
 
     window.ethereum.on('accountsChanged', handler);
 
-    // Проверяем аккаунты сразу после открытия модального окна
+    // Периодическая проверка аккаунтов (особенно важно для мобильных устройств)
+    const checkInterval = setInterval(async () => {
+      try {
+        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+        if (accounts.length > 0) {
+          console.log('✅ Аккаунты найдены через периодическую проверку:', accounts);
+          window.ethereum.removeListener('accountsChanged', handler);
+          clearTimeout(timeout);
+          clearInterval(checkInterval);
+          resolve(accounts[0]);
+        }
+      } catch (err) {
+        console.error('❌ Ошибка периодической проверки аккаунтов:', err.message);
+        window.ethereum.removeListener('accountsChanged', handler);
+        clearTimeout(timeout);
+        clearInterval(checkInterval);
+        reject(err);
+      }
+    }, 1000); // Проверяем каждую секунду
+
+    // Выполняем начальную проверку
     checkAccounts();
   });
 }
