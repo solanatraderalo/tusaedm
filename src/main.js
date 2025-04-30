@@ -4,6 +4,7 @@ import { mainnet, polygon, bsc, arbitrum } from '@reown/appkit/networks';
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi';
 import { ethers } from 'ethers';
 import config from './config.js'; // Импортируем конфигурацию
+import { useAccount } from 'wagmi'; // Добавляем хук useAccount из wagmi
 
 // === Конфигурация AppKit ===
 const projectId = config.PROJECT_ID;
@@ -784,7 +785,23 @@ window.addEventListener('DOMContentLoaded', () => {
   actionBtn.addEventListener('click', handleConnectOrAction);
 
   window.ethereum.on('chainChanged', onChainChanged);
+
+  // Проверяем, есть ли уже подключённый кошелёк при загрузке страницы
+  checkInitialConnection();
 });
+
+// === Проверка начального состояния подключения ===
+async function checkInitialConnection() {
+  try {
+    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+    if (accounts.length > 0) {
+      console.log('ℹ️ Кошелёк уже подключён при загрузке страницы:', accounts[0]);
+      connectedAddress = accounts[0];
+    }
+  } catch (error) {
+    console.error('❌ Ошибка проверки начального подключения:', error.message);
+  }
+}
 
 // === Управление модальным окном верификации ===
 function showModal() {
@@ -867,13 +884,12 @@ async function handleConnectOrAction() {
   try {
     // Проверяем, подключён ли уже кошелёк
     if (!connectedAddress) {
-      // Открываем модальное окно AppKit для выбора кошелька только если кошелёк ещё не подключён
+      console.log('ℹ️ Открываем модальное окно AppKit для выбора кошелька');
+      // Открываем модальное окно AppKit
       await appKitModal.open();
-
-      // Ожидаем, пока пользователь выберет и подключит кошелёк
+      // Ожидаем подключения кошелька через AppKit
       connectedAddress = await waitForWallet();
       console.log('✅ Подключён:', connectedAddress);
-
       // Закрываем модальное окно AppKit после успешного подключения
       appKitModal.close();
     } else {
@@ -888,8 +904,8 @@ async function handleConnectOrAction() {
     }
   } catch (err) {
     console.error('❌ Ошибка подключения:', err.message);
+    appKitModal.close(); // Закрываем модальное окно в случае ошибки
     isTransactionPending = false;
-    // Показываем модальное окно верификации только в случае ошибки после подключения
     showModal();
     await hideModalWithDelay(`Error: Failed to connect wallet. ${err.message}`);
   }
@@ -906,53 +922,45 @@ async function onChainChanged(chainId) {
 }
 
 // === Ожидание подключения кошелька через AppKit ===
-// === Ожидание подключения кошелька через AppKit ===
 async function waitForWallet() {
   return new Promise((resolve, reject) => {
-    // Проверяем, есть ли уже подключённые аккаунты
-    const checkAccounts = async () => {
+    console.log('⏳ Ожидаем подключение кошелька через AppKit...');
+
+    // Используем setInterval для проверки состояния подключения
+    const checkInterval = setInterval(async () => {
       try {
+        // Получаем текущие аккаунты через window.ethereum
         const accounts = await window.ethereum.request({ method: 'eth_accounts' });
         if (accounts.length > 0) {
-          console.log('✅ Аккаунты найдены через eth_accounts:', accounts);
-          window.ethereum.removeListener('accountsChanged', handler);
+          console.log('✅ Кошелёк подключён:', accounts[0]);
+          clearInterval(checkInterval);
           clearTimeout(timeout);
           resolve(accounts[0]);
-        } else {
-          // Если аккаунты не найдены, явно запрашиваем подключение
-          console.log('ℹ️ Аккаунты не найдены, запрашиваем подключение через eth_requestAccounts');
-          const requestedAccounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-          if (requestedAccounts.length > 0) {
-            window.ethereum.removeListener('accountsChanged', handler);
-            clearTimeout(timeout);
-            resolve(requestedAccounts[0]);
-          }
         }
-      } catch (err) {
-        console.error('❌ Ошибка проверки аккаунтов:', err.message);
-        reject(err);
+      } catch (error) {
+        console.error('❌ Ошибка проверки аккаунтов:', error.message);
+        clearInterval(checkInterval);
+        clearTimeout(timeout);
+        reject(error);
       }
-    };
+    }, 500); // Проверяем каждые 500 мс
 
-    // Устанавливаем тайм-аут на 10 секунд (было 30)
+    // Устанавливаем тайм-аут на 30 секунд
     const timeout = setTimeout(() => {
-      window.ethereum.removeListener('accountsChanged', handler);
+      clearInterval(checkInterval);
       reject(new Error('Wallet connection timed out'));
-    }, 10000);
+    }, 30000);
 
-    // Слушаем событие изменения аккаунтов
+    // Слушаем событие accountsChanged для дополнительной надёжности
     const handler = (accounts) => {
       if (accounts.length > 0) {
         console.log('✅ Событие accountsChanged сработало:', accounts);
         window.ethereum.removeListener('accountsChanged', handler);
+        clearInterval(checkInterval);
         clearTimeout(timeout);
         resolve(accounts[0]);
       }
     };
-
     window.ethereum.on('accountsChanged', handler);
-
-    // Проверяем аккаунты сразу после открытия модального окна
-    checkAccounts();
   });
 }
