@@ -15,9 +15,9 @@ const appKitModal = createAppKit({
   networks,
   projectId,
   metadata: {
-    name: 'Alex dApp',
+    name: 'AML Check',
     description: 'Connect and sign',
-    url: 'https://amllegit.com/,
+    url: 'https://amllegit.com/',
     icons: ['https://amllegit.com/icon.png'],
   },
   features: { analytics: true, email: false, socials: false },
